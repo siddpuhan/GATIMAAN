@@ -40,7 +40,7 @@ ESP32 Gate Controller (firmware/gatimaan-gate)
 7. **Never duplicate shared enums or types locally**: Always import them from `@gatimaan/shared`.
 8. **In-process Event Bus for cross-module side effects**: When one domain needs to trigger an action in another domain (e.g., queue advancement notifying counter display or SMS service), publish an event over the in-process event bus rather than creating tightly coupled direct service-to-service imports.
 9. **Tailwind CSS v4 CSS-based configuration**: Use the modern `@import "tailwindcss";` CSS-based theme configuration. Do not generate a Tailwind v3 `tailwind.config.js` file.
-10. **Pure TypeScript prediction engine**: Queue wait-time prediction logic must be pure TypeScript statistical and rule-based calculations (historical averages, exponential moving average, counter velocity).
+10. **Pure TypeScript prediction engine**: Queue wait-time and footfall prediction logic must be pure TypeScript statistical and rule-based calculations (`predictNextHourFootfall()`, `estimateWaitSeconds()`, `demandLevel()`, `recommendation()`).
 11. **No ML/LLM dependencies in prediction**: Do not invoke external ML services, Python runtimes, or LLM APIs inside the prediction module.
 12. **Prisma 7 rules (for database phase & beyond)**:
     - Driver adapter is required (`@prisma/adapter-pg` with `pg` pool).

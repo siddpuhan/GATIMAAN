@@ -15,7 +15,7 @@ This document tracks the progress and verification status across all phases of t
   - [x] Root environment template & docker-compose.yml for local PostgreSQL
   - [x] Root scripts (`lint`, `typecheck`, `test`, `format`)
 
-- [ ] **Phase 1: Shared Package & Core Types/Schemas**
+- [ ] **Phase 1: Project Foundation**
 - [ ] **Phase 2: Database Schema & Migrations (PostgreSQL + Prisma 7)**
 - [ ] **Phase 3: Express API Foundation & Middleware**
 - [ ] **Phase 4: Auth Integration & Role Management (Clerk)**

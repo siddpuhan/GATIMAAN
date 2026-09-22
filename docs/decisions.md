@@ -8,7 +8,7 @@ This log records all significant architectural, technological, and design decisi
 
 - [ADR-0001: Monorepo Foundation with npm Workspaces & TypeScript](#adr-0001-monorepo-foundation-with-npm-workspaces--typescript)
 - [ADR-0002: Modular Monolith vs Microservices](#adr-0002-modular-monolith-vs-microservices)
-- [ADR-0003: Pure TypeScript Statistical Prediction Engine](#adr-0003-pure-typescript-statistical-prediction-engine)
+- [ADR-0003: Pure TypeScript Statistical & Rule-Based Prediction Engine](#adr-0003-pure-typescript-statistical--rule-based-prediction-engine)
 
 ---
 
@@ -36,12 +36,12 @@ This log records all significant architectural, technological, and design decisi
 
 ---
 
-### ADR-0003: Pure TypeScript Statistical Prediction Engine
+### ADR-0003: Pure TypeScript Statistical & Rule-Based Prediction Engine
 
 - **Status**: Accepted
 - **Date**: 2026-09-22 (Phase 0)
-- **Context**: Accurate queue wait time estimation is required without introducing external ML infrastructure or cloud LLM latency/costs.
-- **Decision**: Implement wait-time predictions in pure TypeScript using rolling averages, exponential moving average (EMA), and counter velocity heuristics.
+- **Context**: Queue wait time and footfall estimations must be calculated efficiently without introducing external ML infrastructure, Python runtimes, or cloud LLM latency/costs.
+- **Decision**: Implement all prediction and estimation logic (`predictNextHourFootfall()`, `estimateWaitSeconds()`, `demandLevel()`, `recommendation()`) in pure TypeScript statistical and rule-based calculations.
 - **Consequences**:
-  - Positive: Sub-millisecond calculation time, 100% deterministic, zero external API costs or failure modes.
-  - Negative: Does not perform natural language analysis (not needed for numerical queue times).
+  - Positive: Fast in-process calculation time, deterministic behavior, zero external API costs or external service failure modes.
+  - Negative: Relies on structured statistical historical records and active counter state rather than complex non-deterministic black-box models.

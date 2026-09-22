@@ -49,18 +49,18 @@ GATIMAAN follows a clean modular monolith architecture designed for simplicity, 
 
 ## 2. Technology Stack Decisions
 
-| Tier / Component  | Technology            | Rationale                                                                       |
-| :---------------- | :-------------------- | :------------------------------------------------------------------------------ |
-| **Monorepo**      | npm workspaces        | Native Node.js monorepo tooling without extra orchestrator overhead.            |
-| **Language**      | TypeScript (Strict)   | End-to-end type safety across shared schemas, API, and web frontend.            |
-| **Frontend Web**  | React 18+ / Vite      | Fast build times, responsive client-side SPA.                                   |
-| **Styling**       | Tailwind CSS v4       | CSS-first configuration `@import "tailwindcss";`, modern design tokens.         |
-| **Backend API**   | Node.js / Express     | Robust, standard HTTP API server with modular route/service layers.             |
-| **Realtime**      | Socket.IO             | Bi-directional low-latency queue status updates and counter calling broadcasts. |
-| **Database ORM**  | PostgreSQL + Prisma 7 | Type-safe queries, driver adapter architecture (`@prisma/adapter-pg`).          |
-| **Hardware Gate** | ESP32 (C++/Arduino)   | Embedded Wi-Fi/HTTPS hardware controller for gate scanning & actuation.         |
-| **Prediction**    | Pure TypeScript       | Statistical heuristics & EMA calculations, zero external ML dependencies.       |
-| **Auth**          | Clerk                 | Managed authentication & role management (Admin, Operator, Citizen).            |
+| Tier / Component  | Technology            | Rationale                                                                                                                                                 |
+| :---------------- | :-------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Monorepo**      | npm workspaces        | Native Node.js monorepo tooling without extra orchestrator overhead.                                                                                      |
+| **Language**      | TypeScript (Strict)   | End-to-end type safety across shared schemas, API, and web frontend.                                                                                      |
+| **Frontend Web**  | React 18+ / Vite      | Fast build times, responsive client-side SPA.                                                                                                             |
+| **Styling**       | Tailwind CSS v4       | CSS-first configuration `@import "tailwindcss";`, modern design tokens.                                                                                   |
+| **Backend API**   | Node.js / Express     | Robust, standard HTTP API server with modular route/service layers.                                                                                       |
+| **Realtime**      | Socket.IO             | Bi-directional low-latency queue status updates and counter calling broadcasts.                                                                           |
+| **Database ORM**  | PostgreSQL + Prisma 7 | Type-safe queries, driver adapter architecture (`@prisma/adapter-pg`).                                                                                    |
+| **Hardware Gate** | ESP32 (C++/Arduino)   | Embedded Wi-Fi/HTTPS hardware controller for gate scanning & actuation.                                                                                   |
+| **Prediction**    | Pure TypeScript       | Statistical & rule-based calculations (`predictNextHourFootfall`, `estimateWaitSeconds`, `demandLevel`, `recommendation`), zero external ML dependencies. |
+| **Auth**          | Clerk                 | Managed authentication & role management (Admin, Operator, Citizen).                                                                                      |
 
 ---
 
