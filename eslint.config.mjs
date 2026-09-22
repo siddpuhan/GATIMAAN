@@ -12,6 +12,7 @@ export default tseslint.config(
       '**/dist/**',
       '**/build/**',
       '**/coverage/**',
+      '**/generated/**',
       'firmware/**',
       'tools/**',
     ],

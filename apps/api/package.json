@@ -6,23 +6,32 @@
   "main": "./dist/index.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc -b",
+    "build": "prisma generate --schema=prisma/schema.prisma && tsc -b",
     "start": "node dist/server.js",
     "lint": "eslint src/",
     "typecheck": "tsc -b",
-    "test": "tsx --test src/__tests__/**/*.test.ts"
+    "test": "tsx --test src/__tests__/**/*.test.ts",
+    "prisma:generate": "prisma generate --schema=prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema=prisma/schema.prisma",
+    "prisma:deploy": "prisma migrate deploy --schema=prisma/schema.prisma",
+    "prisma:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@gatimaan/shared": "*",
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
-    "express": "^5.0.1"
+    "express": "^5.0.1",
+    "pg": "^8.13.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/node": "^22.13.4",
+    "@types/pg": "^8.11.11",
     "@types/supertest": "^6.0.2",
+    "prisma": "7.10.0",
     "supertest": "^7.0.0",
     "tsx": "^4.19.2"
   }

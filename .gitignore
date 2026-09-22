@@ -9,6 +9,8 @@ build/
 out/
 .next/
 *.tsbuildinfo
+src/generated/
+**/generated/
 
 # Environment files
 .env

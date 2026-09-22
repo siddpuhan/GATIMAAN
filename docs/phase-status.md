@@ -21,7 +21,13 @@ This document tracks the progress and verification status across all phases of t
   - [x] `@gatimaan/shared` package foundation
   - [x] Supabase PostgreSQL environment structure (no local Docker)
   - [x] Automated health test and build verification
-- [ ] **Phase 2: Database Schema & Migrations (PostgreSQL + Prisma 7)**
+- [x] **Phase 2: Database Schema & Migrations (PostgreSQL + Prisma 7)**
+  - [x] Prisma 7.10.0 pinned setup with `@prisma/adapter-pg` driver adapter
+  - [x] Complete canonical 10-table schema & enums
+  - [x] §7.3 query indexes, partial serving constraint & IoT idempotency unique constraint
+  - [x] Initial migration created and applied to Supabase PostgreSQL
+  - [x] Deterministic idempotent development seed script
+  - [x] Database connectivity and query test suite
 - [ ] **Phase 3: Express API Foundation & Middleware**
 - [ ] **Phase 4: Auth Integration & Role Management (Clerk)**
 - [ ] **Phase 5: Core Queue Engine & State Machine**
