@@ -4,6 +4,8 @@ import { clerkMiddleware } from '@clerk/express';
 import { config } from './config/env.js';
 import { healthRouter } from './routes/health.js';
 import { authRouter } from './routes/auth.js';
+import { servicesRouter } from './routes/services.js';
+import { countersRouter } from './routes/counters.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 
 export function createApp(): Express {
@@ -30,6 +32,9 @@ export function createApp(): Express {
   // Routes
   app.use('/', healthRouter);
   app.use('/', authRouter);
+  app.use('/', servicesRouter);
+  app.use('/', countersRouter);
+
 
   // Error handling
   app.use(notFoundHandler);
