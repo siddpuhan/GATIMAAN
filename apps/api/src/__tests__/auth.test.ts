@@ -62,10 +62,10 @@ describe('Auth & RBAC Middleware Unit Tests', () => {
     // Controlled test app with simulated customer auth context
     const testApp = express();
     testApp.use((req: Request, _res: Response, next) => {
-      req.auth = {
+      req.auth = () => ({
         userId: 'user_customer_test',
         sessionClaims: { metadata: { role: 'CUSTOMER' } },
-      };
+      });
       next();
     });
     testApp.get('/admin-test', requireAuth, requireRole(UserRole.ADMIN), (_req, res) => {
@@ -82,10 +82,10 @@ describe('Auth & RBAC Middleware Unit Tests', () => {
     // Controlled test app with simulated admin auth context
     const testApp = express();
     testApp.use((req: Request, _res: Response, next) => {
-      req.auth = {
+      req.auth = () => ({
         userId: 'user_admin_test',
         sessionClaims: { metadata: { role: 'ADMIN' } },
-      };
+      });
       next();
     });
     testApp.get('/admin-test', requireAuth, requireRole(UserRole.ADMIN), (_req, res) => {

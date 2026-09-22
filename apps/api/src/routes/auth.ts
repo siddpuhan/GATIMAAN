@@ -1,15 +1,16 @@
 import { Router, Request, Response } from 'express';
 import { UserRole } from '@gatimaan/shared';
-import { requireAuth, requireRole, syncUserMiddleware } from '../middleware/auth.js';
+import { requireAuth, requireRole, syncUserMiddleware, getAuthContext } from '../middleware/auth.js';
 
 export const authRouter = Router();
 
 // GET /api/auth/me - Retrieve current authenticated profile & local synced database record
 authRouter.get('/api/auth/me', requireAuth, syncUserMiddleware, (req: Request, res: Response) => {
+  const auth = getAuthContext(req);
   res.status(200).json({
     authenticated: true,
     user: req.user,
-    clerkUserId: req.auth?.userId,
+    clerkUserId: auth?.userId,
   });
 });
 
