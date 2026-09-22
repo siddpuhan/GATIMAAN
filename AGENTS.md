@@ -72,3 +72,16 @@ Do NOT introduce any of the following:
 - Kubernetes or complex orchestration
 - External ML/LLM services for core queue prediction
 - Native mobile applications (the citizen portal is a mobile-first responsive web app)
+
+## Git Branching & Commit Rules
+
+- `main` is the stable integration branch.
+- Never implement a new phase directly on `main`.
+- Before starting a phase, create and work exclusively on a dedicated branch:
+  `phase-<number>-<short-name>`.
+- All commits for that phase must remain on the phase branch.
+- Never merge a phase branch into `main` automatically.
+- Never force-push or rewrite shared branch history.
+- At phase completion, run lint, typecheck, tests, build, and required manual verification.
+- Push the phase branch only after verification.
+- The human/project lead decides when the phase branch is merged into `main`.
