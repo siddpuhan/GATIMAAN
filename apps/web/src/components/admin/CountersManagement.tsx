@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/clerk-react';
-import { CounterWithSessionDTO, CreateCounterInput } from '@gatimaan/shared';
+import { CounterWithSessionDTO, CreateCounterInput, CounterDTO, CounterSessionDTO } from '@gatimaan/shared';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 export function CountersManagement() {
   const { getToken } = useAuth();
   const [counters, setCounters] = useState<CounterWithSessionDTO[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [actionPendingId, setActionPendingId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -22,7 +24,6 @@ export function CountersManagement() {
 
   const fetchCounters = async () => {
     try {
-      setLoading(true);
       setError(null);
       const token = await getToken();
       const res = await fetch(`${API_BASE}/api/counters`, {
@@ -41,7 +42,7 @@ export function CountersManagement() {
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error fetching counters');
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
     }
   };
 
@@ -73,6 +74,7 @@ export function CountersManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      setIsSaving(true);
       setError(null);
       setSuccessMsg(null);
       const token = await getToken();
@@ -95,16 +97,35 @@ export function CountersManagement() {
         throw new Error(data.message || 'Failed to save counter');
       }
 
+      const savedCounter: CounterDTO = await res.json();
+
+      setCounters((prev) => {
+        if (editingCounter) {
+          return prev.map((c) =>
+            c.id === savedCounter.id
+              ? { ...c, counterNumber: savedCounter.counterNumber, name: savedCounter.name, isActive: savedCounter.isActive }
+              : c
+          );
+        }
+        const newCounterWithSession: CounterWithSessionDTO = {
+          ...savedCounter,
+          currentSession: null,
+        };
+        return [...prev, newCounterWithSession].sort((a, b) => a.counterNumber - b.counterNumber);
+      });
+
       setShowModal(false);
-      setSuccessMsg(editingCounter ? 'Counter updated' : 'Counter created');
-      await fetchCounters();
+      setSuccessMsg(editingCounter ? 'Counter updated successfully' : 'Counter created successfully');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error saving counter');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleToggleStatus = async (counter: CounterWithSessionDTO) => {
     try {
+      setActionPendingId(counter.id);
       setError(null);
       setSuccessMsg(null);
       const token = await getToken();
@@ -122,14 +143,20 @@ export function CountersManagement() {
         throw new Error(data.message || 'Failed to toggle status');
       }
 
-      await fetchCounters();
+      const updated: CounterDTO = await res.json();
+      setCounters((prev) =>
+        prev.map((c) => (c.id === updated.id ? { ...c, isActive: updated.isActive } : c))
+      );
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error toggling status');
+    } finally {
+      setActionPendingId(null);
     }
   };
 
   const handleOpenSession = async (counter: CounterWithSessionDTO) => {
     try {
+      setActionPendingId(counter.id);
       setError(null);
       setSuccessMsg(null);
       const token = await getToken();
@@ -145,15 +172,22 @@ export function CountersManagement() {
         throw new Error(data.message || 'Failed to open counter');
       }
 
+      const data: { session: CounterSessionDTO } = await res.json();
       setSuccessMsg(`Counter ${counter.counterNumber} desk session opened`);
-      await fetchCounters();
+
+      setCounters((prev) =>
+        prev.map((c) => (c.id === counter.id ? { ...c, currentSession: data.session } : c))
+      );
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error opening counter');
+    } finally {
+      setActionPendingId(null);
     }
   };
 
   const handleCloseSession = async (counter: CounterWithSessionDTO) => {
     try {
+      setActionPendingId(counter.id);
       setError(null);
       setSuccessMsg(null);
       const token = await getToken();
@@ -170,9 +204,14 @@ export function CountersManagement() {
       }
 
       setSuccessMsg(`Counter ${counter.counterNumber} desk session closed`);
-      await fetchCounters();
+
+      setCounters((prev) =>
+        prev.map((c) => (c.id === counter.id ? { ...c, currentSession: null } : c))
+      );
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error closing counter');
+    } finally {
+      setActionPendingId(null);
     }
   };
 
@@ -185,7 +224,7 @@ export function CountersManagement() {
         </div>
         <button
           onClick={handleOpenCreate}
-          className="px-3.5 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition"
+          className="px-3.5 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition shadow-xs"
         >
           + Add Counter
         </button>
@@ -203,11 +242,14 @@ export function CountersManagement() {
         </div>
       )}
 
-      {loading ? (
-        <div className="text-center py-6 text-xs text-gray-500">Loading counters...</div>
+      {initialLoading ? (
+        <div className="text-center py-8 text-xs text-gray-500 flex items-center justify-center gap-2">
+          <span className="w-3 h-3 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+          Loading counters...
+        </div>
       ) : counters.length === 0 ? (
         <div className="text-center py-8 bg-gray-50 rounded border border-gray-200 text-xs text-gray-500">
-          No counters configured yet.
+          No counters configured yet. Click &quot;+ Add Counter&quot; to create one.
         </div>
       ) : (
         <div className="overflow-x-auto border border-gray-200 rounded-lg">
@@ -225,8 +267,9 @@ export function CountersManagement() {
             <tbody className="divide-y divide-gray-100">
               {counters.map((c) => {
                 const isSessionOpen = !!c.currentSession;
+                const isPending = actionPendingId === c.id;
                 return (
-                  <tr key={c.id} className="hover:bg-gray-50 transition">
+                  <tr key={c.id} className="hover:bg-gray-50/75 transition">
                     <td className="py-2.5 px-4 font-mono font-bold text-gray-900">
                       #{c.counterNumber}
                     </td>
@@ -258,16 +301,23 @@ export function CountersManagement() {
                       {isSessionOpen ? (
                         <button
                           onClick={() => handleCloseSession(c)}
-                          className="px-2.5 py-1 bg-amber-50 border border-amber-300 text-amber-800 rounded font-medium hover:bg-amber-100 transition"
+                          disabled={isPending}
+                          className="px-2.5 py-1 bg-amber-50 border border-amber-300 text-amber-800 rounded font-medium hover:bg-amber-100 transition disabled:opacity-50 inline-flex items-center gap-1"
                         >
+                          {isPending && (
+                            <span className="w-2.5 h-2.5 rounded-full border border-current border-t-transparent animate-spin" />
+                          )}
                           Close Session
                         </button>
                       ) : (
                         <button
                           onClick={() => handleOpenSession(c)}
-                          disabled={!c.isActive}
-                          className="px-2.5 py-1 bg-green-50 border border-green-300 text-green-800 rounded font-medium hover:bg-green-100 transition disabled:opacity-50"
+                          disabled={!c.isActive || isPending}
+                          className="px-2.5 py-1 bg-green-50 border border-green-300 text-green-800 rounded font-medium hover:bg-green-100 transition disabled:opacity-40 inline-flex items-center gap-1"
                         >
+                          {isPending && (
+                            <span className="w-2.5 h-2.5 rounded-full border border-current border-t-transparent animate-spin" />
+                          )}
                           Open Session
                         </button>
                       )}
@@ -275,16 +325,21 @@ export function CountersManagement() {
                     <td className="py-2.5 px-4 text-right space-x-2">
                       <button
                         onClick={() => handleOpenEdit(c)}
-                        className="text-blue-600 hover:text-blue-800 font-medium"
+                        disabled={isPending}
+                        className="text-blue-600 hover:text-blue-800 font-medium disabled:opacity-40"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleToggleStatus(c)}
-                        className={`font-medium ${
+                        disabled={isPending}
+                        className={`font-medium disabled:opacity-40 inline-flex items-center gap-1 ${
                           c.isActive ? 'text-amber-600 hover:text-amber-800' : 'text-green-600 hover:text-green-800'
                         }`}
                       >
+                        {isPending && (
+                          <span className="w-2.5 h-2.5 rounded-full border border-current border-t-transparent animate-spin" />
+                        )}
                         {c.isActive ? 'Deactivate' : 'Activate'}
                       </button>
                     </td>
@@ -330,6 +385,7 @@ export function CountersManagement() {
               <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
                 <button
                   type="button"
+                  disabled={isSaving}
                   onClick={() => setShowModal(false)}
                   className="px-3 py-1.5 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition"
                 >
@@ -337,8 +393,12 @@ export function CountersManagement() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition"
+                  disabled={isSaving}
+                  className="px-4 py-1.5 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition disabled:opacity-50 inline-flex items-center gap-1.5"
                 >
+                  {isSaving && (
+                    <span className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  )}
                   {editingCounter ? 'Save Changes' : 'Create Counter'}
                 </button>
               </div>
@@ -349,3 +409,4 @@ export function CountersManagement() {
     </div>
   );
 }
+

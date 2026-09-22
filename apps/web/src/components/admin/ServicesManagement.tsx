@@ -7,7 +7,9 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 export function ServicesManagement() {
   const { getToken } = useAuth();
   const [services, setServices] = useState<ServiceDTO[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [actionPendingId, setActionPendingId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingService, setEditingService] = useState<ServiceDTO | null>(null);
@@ -25,7 +27,6 @@ export function ServicesManagement() {
 
   const fetchServices = async () => {
     try {
-      setLoading(true);
       setError(null);
       const token = await getToken();
       const res = await fetch(`${API_BASE}/api/services`, {
@@ -44,7 +45,7 @@ export function ServicesManagement() {
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error fetching services');
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
     }
   };
 
@@ -83,6 +84,7 @@ export function ServicesManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      setIsSaving(true);
       setError(null);
       const token = await getToken();
       const url = editingService
@@ -104,15 +106,27 @@ export function ServicesManagement() {
         throw new Error(data.message || 'Failed to save service');
       }
 
+      const savedService: ServiceDTO = await res.json();
+      
+      // Update local state directly without triggering a full re-fetch roundtrip
+      setServices((prev) => {
+        if (editingService) {
+          return prev.map((s) => (s.id === savedService.id ? savedService : s));
+        }
+        return [...prev, savedService].sort((a, b) => a.priority - b.priority || a.code.localeCompare(b.code));
+      });
+
       setShowModal(false);
-      await fetchServices();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error saving service');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleToggleStatus = async (service: ServiceDTO) => {
     try {
+      setActionPendingId(service.id);
       setError(null);
       const token = await getToken();
       const res = await fetch(`${API_BASE}/api/services/${service.id}/status`, {
@@ -129,9 +143,16 @@ export function ServicesManagement() {
         throw new Error(data.message || 'Failed to toggle status');
       }
 
-      await fetchServices();
+      const updatedService: ServiceDTO = await res.json();
+
+      // Update in-place immediately
+      setServices((prev) =>
+        prev.map((s) => (s.id === updatedService.id ? updatedService : s))
+      );
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error toggling status');
+    } finally {
+      setActionPendingId(null);
     }
   };
 
@@ -144,7 +165,7 @@ export function ServicesManagement() {
         </div>
         <button
           onClick={handleOpenCreate}
-          className="px-3.5 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition"
+          className="px-3.5 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition shadow-xs"
         >
           + Add Service
         </button>
@@ -156,11 +177,14 @@ export function ServicesManagement() {
         </div>
       )}
 
-      {loading ? (
-        <div className="text-center py-6 text-xs text-gray-500">Loading services...</div>
+      {initialLoading ? (
+        <div className="text-center py-8 text-xs text-gray-500 flex items-center justify-center gap-2">
+          <span className="w-3 h-3 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+          Loading services...
+        </div>
       ) : services.length === 0 ? (
         <div className="text-center py-8 bg-gray-50 rounded border border-gray-200 text-xs text-gray-500">
-          No services configured yet.
+          No services configured yet. Click &quot;+ Add Service&quot; to create one.
         </div>
       ) : (
         <div className="overflow-x-auto border border-gray-200 rounded-lg">
@@ -177,51 +201,59 @@ export function ServicesManagement() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {services.map((s) => (
-                <tr key={s.id} className="hover:bg-gray-50 transition">
-                  <td className="py-2.5 px-4 font-mono font-medium text-gray-900">{s.code}</td>
-                  <td className="py-2.5 px-4 text-gray-800 font-medium">
-                    {s.name}
-                    {s.description && (
-                      <p className="text-[11px] text-gray-500 font-normal">{s.description}</p>
-                    )}
-                  </td>
-                  <td className="py-2.5 px-4">
-                    <span className="px-2 py-0.5 bg-gray-100 rounded text-gray-700 font-mono font-bold">
-                      {s.prefix}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-4 text-gray-600">{s.avgDurationMinutes} mins</td>
-                  <td className="py-2.5 px-4 text-gray-600">{s.priority}</td>
-                  <td className="py-2.5 px-4">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                        s.isActive
-                          ? 'bg-green-100 text-green-800 border border-green-200'
-                          : 'bg-gray-100 text-gray-600 border border-gray-200'
-                      }`}
-                    >
-                      {s.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-4 text-right space-x-2">
-                    <button
-                      onClick={() => handleOpenEdit(s)}
-                      className="text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleToggleStatus(s)}
-                      className={`font-medium ${
-                        s.isActive ? 'text-amber-600 hover:text-amber-800' : 'text-green-600 hover:text-green-800'
-                      }`}
-                    >
-                      {s.isActive ? 'Deactivate' : 'Activate'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {services.map((s) => {
+                const isPending = actionPendingId === s.id;
+                return (
+                  <tr key={s.id} className="hover:bg-gray-50/75 transition">
+                    <td className="py-2.5 px-4 font-mono font-medium text-gray-900">{s.code}</td>
+                    <td className="py-2.5 px-4 text-gray-800 font-medium">
+                      {s.name}
+                      {s.description && (
+                        <p className="text-[11px] text-gray-500 font-normal">{s.description}</p>
+                      )}
+                    </td>
+                    <td className="py-2.5 px-4">
+                      <span className="px-2 py-0.5 bg-gray-100 rounded text-gray-700 font-mono font-bold">
+                        {s.prefix}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-4 text-gray-600">{s.avgDurationMinutes} mins</td>
+                    <td className="py-2.5 px-4 text-gray-600">{s.priority}</td>
+                    <td className="py-2.5 px-4">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          s.isActive
+                            ? 'bg-green-100 text-green-800 border border-green-200'
+                            : 'bg-gray-100 text-gray-600 border border-gray-200'
+                        }`}
+                      >
+                        {s.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-4 text-right space-x-2">
+                      <button
+                        onClick={() => handleOpenEdit(s)}
+                        disabled={isPending}
+                        className="text-blue-600 hover:text-blue-800 font-medium disabled:opacity-40"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleToggleStatus(s)}
+                        disabled={isPending}
+                        className={`font-medium disabled:opacity-40 inline-flex items-center gap-1 ${
+                          s.isActive ? 'text-amber-600 hover:text-amber-800' : 'text-green-600 hover:text-green-800'
+                        }`}
+                      >
+                        {isPending && (
+                          <span className="w-2.5 h-2.5 rounded-full border border-current border-t-transparent animate-spin" />
+                        )}
+                        {s.isActive ? 'Deactivate' : 'Activate'}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -308,6 +340,7 @@ export function ServicesManagement() {
               <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
                 <button
                   type="button"
+                  disabled={isSaving}
                   onClick={() => setShowModal(false)}
                   className="px-3 py-1.5 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition"
                 >
@@ -315,8 +348,12 @@ export function ServicesManagement() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition"
+                  disabled={isSaving}
+                  className="px-4 py-1.5 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition disabled:opacity-50 inline-flex items-center gap-1.5"
                 >
+                  {isSaving && (
+                    <span className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  )}
                   {editingService ? 'Save Changes' : 'Create Service'}
                 </button>
               </div>
@@ -327,3 +364,4 @@ export function ServicesManagement() {
     </div>
   );
 }
+
