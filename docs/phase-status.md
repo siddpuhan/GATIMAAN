@@ -35,8 +35,15 @@ This document tracks the progress and verification status across all phases of t
   - [x] Lazy PostgreSQL user synchronization (`clerkUserId`, `role`, `email`)
   - [x] Protected route wrapper (`<ProtectedRoute>`) and Admin shell in React
   - [x] Full unit and integration test suite passing
-- [ ] **Phase 4: Auth Integration & Role Management (Clerk)**
+- [ ] **Phase 4: Services & Counters Management** *(implementation complete / pending manual verification)*
+  - [x] Shared Zod schemas and DTO contracts in `@gatimaan/shared`
+  - [x] Typed application errors (`AppError`, `NotFoundError`, `ConflictError`, `BadRequestError`)
+  - [x] Services domain logic and route handlers (`GET`, `POST`, `PATCH`, `/status`)
+  - [x] Counters domain logic and desk session lifecycle (`open`, `close`, `/status`)
+  - [x] Protected React admin interface for Services & Counters management
+  - [x] Automated unit and integration test suite passing
 - [ ] **Phase 5: Core Queue Engine & State Machine**
+
 - [ ] **Phase 6: Service Counters & Token Calling Flow**
 - [ ] **Phase 7: Waiting Time Prediction Engine (Pure TS Statistical)**
 - [ ] **Phase 8: Real-Time Event Bus & Socket.IO Server**
