@@ -1,0 +1,30 @@
+{
+  "name": "gatimaan",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GATIMAAN - IoT-enabled Smart Queue Management System",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc -b",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.20.0",
+    "eslint": "^9.20.0",
+    "eslint-config-prettier": "^10.0.1",
+    "prettier": "^3.5.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.23.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
