@@ -9,6 +9,7 @@ This log records all significant architectural, technological, and design decisi
 - [ADR-0001: Monorepo Foundation with npm Workspaces & TypeScript](#adr-0001-monorepo-foundation-with-npm-workspaces--typescript)
 - [ADR-0002: Modular Monolith vs Microservices](#adr-0002-modular-monolith-vs-microservices)
 - [ADR-0003: Pure TypeScript Statistical & Rule-Based Prediction Engine](#adr-0003-pure-typescript-statistical--rule-based-prediction-engine)
+- [ADR-0004: Hosted Supabase PostgreSQL Architecture (No Local Docker)](#adr-0004-hosted-supabase-postgresql-architecture-no-local-docker)
 
 ---
 
@@ -45,3 +46,15 @@ This log records all significant architectural, technological, and design decisi
 - **Consequences**:
   - Positive: Fast in-process calculation time, deterministic behavior, zero external API costs or external service failure modes.
   - Negative: Relies on structured statistical historical records and active counter state rather than complex non-deterministic black-box models.
+
+---
+
+### ADR-0004: Hosted Supabase PostgreSQL Architecture (No Local Docker)
+
+- **Status**: Accepted
+- **Date**: 2026-09-22 (Phase 1)
+- **Context**: A single consistent PostgreSQL database is needed from local development through production deployment without the overhead or friction of running local Docker containers.
+- **Decision**: Use a hosted Supabase PostgreSQL database project across development and deployment. The backend connects via standard `DATABASE_URL` / `DIRECT_URL` environment variables consumed by Prisma (in Phase 2). Do not use Docker or local container setups. Do not use Supabase Auth or Supabase Realtime client libraries; the database is accessed strictly as standard PostgreSQL.
+- **Consequences**:
+  - Positive: Consistent database behavior across dev and prod, zero local Docker prerequisites, seamless remote management.
+  - Negative: Requires internet connectivity for local backend database queries during development.
