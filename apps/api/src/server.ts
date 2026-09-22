@@ -3,9 +3,9 @@ import { config } from './config/env.js';
 
 const app = createApp();
 
-const server = app.listen(config.port, () => {
+const server = app.listen(config.port, '0.0.0.0', () => {
   console.log(`[GATIMAAN API] Server running on port ${config.port} (${config.nodeEnv})`);
-  console.log(`[GATIMAAN API] Health check available at http://localhost:${config.port}/health`);
+  console.log(`[GATIMAAN API] Health check available at http://0.0.0.0:${config.port}/health`);
 });
 
 // Graceful shutdown handling

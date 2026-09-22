@@ -12,7 +12,12 @@ export function createApp(): Express {
   const app = express();
 
   // Basic middleware
-  app.use(cors({ origin: config.corsOrigin, credentials: true }));
+  app.use(
+    cors({
+      origin: config.corsOrigins.length === 1 ? config.corsOrigins[0] : config.corsOrigins,
+      credentials: true,
+    })
+  );
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
