@@ -59,3 +59,15 @@ export enum NotificationStatus {
   SENT = 'SENT',
   FAILED = 'FAILED',
 }
+
+// Authenticated User Context Interface
+export interface AuthUser {
+  id: string;
+  clerkUserId: string;
+  email: string;
+  name: string | null;
+  phone: string | null;
+  role: UserRole;
+  createdAt: Date;
+  updatedAt: Date;
+}

@@ -1,7 +1,9 @@
 import express, { Express } from 'express';
 import cors from 'cors';
+import { clerkMiddleware } from '@clerk/express';
 import { config } from './config/env.js';
 import { healthRouter } from './routes/health.js';
+import { authRouter } from './routes/auth.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 
 export function createApp(): Express {
@@ -12,8 +14,22 @@ export function createApp(): Express {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // Clerk authentication middleware (applied when CLERK_SECRET_KEY is configured)
+  if (config.clerkSecretKey) {
+    app.use(clerkMiddleware({ secretKey: config.clerkSecretKey }));
+  } else {
+    // Development/test fallback: ensure req.auth structure is defined
+    app.use((req, _res, next) => {
+      if (!req.auth) {
+        req.auth = { userId: null, claims: null, sessionClaims: null };
+      }
+      next();
+    });
+  }
+
   // Routes
   app.use('/', healthRouter);
+  app.use('/', authRouter);
 
   // Error handling
   app.use(notFoundHandler);

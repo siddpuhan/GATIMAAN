@@ -1,12 +1,8 @@
-import { describe, it, after } from 'node:test';
+import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { prisma, disconnectDb } from '../db/client.js';
+import { prisma } from '../db/client.js';
 
 describe('Database & Prisma 7 Connectivity', () => {
-  after(async () => {
-    await disconnectDb();
-  });
-
   it('should establish connection and query seeded services', async () => {
     const services = await prisma.service.findMany({
       where: { isActive: true },

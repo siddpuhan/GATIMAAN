@@ -28,7 +28,13 @@ This document tracks the progress and verification status across all phases of t
   - [x] Initial migration created and applied to Supabase PostgreSQL
   - [x] Deterministic idempotent development seed script
   - [x] Database connectivity and query test suite
-- [ ] **Phase 3: Express API Foundation & Middleware**
+- [x] **Phase 3: Express API Foundation & Middleware** (Authentication & RBAC Foundation)
+  - [x] Clerk hosted authentication integration (`@clerk/express` and `@clerk/clerk-react`)
+  - [x] Canonical roles (`CUSTOMER`, `ADMIN`) via Clerk `publicMetadata.role`
+  - [x] Backend `requireAuth` (401) and `requireRole` (403) middleware guards
+  - [x] Lazy PostgreSQL user synchronization (`clerkUserId`, `role`, `email`)
+  - [x] Protected route wrapper (`<ProtectedRoute>`) and Admin shell in React
+  - [x] Full unit and integration test suite passing
 - [ ] **Phase 4: Auth Integration & Role Management (Clerk)**
 - [ ] **Phase 5: Core Queue Engine & State Machine**
 - [ ] **Phase 6: Service Counters & Token Calling Flow**

@@ -12,6 +12,7 @@
     "test": "node --test --test-reporter=spec || true"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.22.12",
     "@gatimaan/shared": "*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
