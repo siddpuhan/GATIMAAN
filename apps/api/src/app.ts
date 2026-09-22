@@ -20,10 +20,10 @@ export function createApp(): Express {
   if (config.clerkSecretKey) {
     app.use(clerkMiddleware({ secretKey: config.clerkSecretKey }));
   } else {
-    // Development/test fallback: ensure req.auth structure is defined
+    // Development/test fallback: ensure req.auth structure is defined as function
     app.use((req, _res, next) => {
       if (!req.auth) {
-        req.auth = { userId: null, claims: null, sessionClaims: null };
+        req.auth = () => ({ userId: null, sessionId: null, claims: null, sessionClaims: null });
       }
       next();
     });

@@ -11,13 +11,13 @@ function createAdminApp() {
   const app = express();
   app.use(express.json());
   app.use((req: Request, _res: Response, next) => {
-    req.auth = {
+    req.auth = () => ({
       userId: 'test_admin_services',
       sessionClaims: {
         email: 'admin_services@test.local',
         metadata: { role: 'ADMIN' },
       },
-    };
+    });
     next();
   });
   app.use('/', servicesRouter);
@@ -29,13 +29,13 @@ function createCustomerApp() {
   const app = express();
   app.use(express.json());
   app.use((req: Request, _res: Response, next) => {
-    req.auth = {
+    req.auth = () => ({
       userId: 'test_cust_services',
       sessionClaims: {
         email: 'cust_services@test.local',
         metadata: { role: 'CUSTOMER' },
       },
-    };
+    });
     next();
   });
   app.use('/', servicesRouter);
