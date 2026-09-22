@@ -12,11 +12,13 @@ out/
 
 # Environment files
 .env
+.env.*
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 !.env.example
+!**/.env.example
 
 # Logs
 logs/
