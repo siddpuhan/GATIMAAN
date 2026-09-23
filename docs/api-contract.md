@@ -46,17 +46,17 @@ This document defines the HTTP REST and WebSocket API specifications for the GAT
 
 ---
 
-## 2. Services Management Endpoints (Phase 4)
-
-All service management endpoints require `ADMIN` role.
+## 2. Services Endpoints (Phase 4 & Phase 8)
 
 ### `GET /api/services`
-- **Auth**: `requireAuth`, `requireRole(UserRole.ADMIN)`
-- **Query Params**: `includeInactive` (optional, boolean, default: `true`)
+- **Auth**: Public / Optional `requireAuth`
+- **Description**: Returns available services. Non-admin / public requests return only active services (`isActive: true`). Admin requests can optionally supply `includeInactive=true`.
+- **Query Params**: `includeInactive` (optional, boolean, default: `false` for public/customer, `true` for admin)
 - **Response**: `200 OK` — Array of `ServiceDTO`
 
 ### `GET /api/services/:id`
-- **Auth**: `requireAuth`, `requireRole(UserRole.ADMIN)`
+- **Auth**: Public / Optional `requireAuth`
+- **Description**: Retrieves single service details by ID.
 - **Response**: `200 OK` — `ServiceDTO` | `404 Not Found`
 
 ### `POST /api/services`

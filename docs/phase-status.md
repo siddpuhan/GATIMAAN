@@ -58,11 +58,24 @@ This document tracks the progress and verification status across all phases of t
   - [x] Post-transaction domain event dispatching from `QueueService`
   - [x] Client-side connection singleton and React subscription hooks (`useTicketSubscription`, `useQueueSubscription`, etc.)
   - [x] Comprehensive realtime integration test suite with room ACKs, lifecycle broadcasts, and transaction rollback protections
-- [ ] **Phase 8: Waiting Time Prediction Engine (Pure TS Statistical)**
-- [ ] **Phase 9: Hardware Gate Controller / ESP32 Integration (Firmware & API Gateways)**
-- [ ] **Phase 10: Notification Service (SMS/WhatsApp/Push Alerts)**
+- [x] **Phase 8: Customer UI (Citizen Portal & Live Digital Pass)**
+  - [x] Public read access for active services (`GET /api/services` and `/api/services/:id`)
+  - [x] Optional authenticated user identity synchronization on ticket issuance (`POST /api/tickets/issue`)
+  - [x] Citizen landing portal with available services catalog & search filtering (`CustomerPortalPage.tsx`)
+  - [x] Real-time service queue cards with live waiting count subscriptions (`ServiceCard.tsx`, `ServiceGrid.tsx`)
+  - [x] 1-Click instant token generation and localStorage session persistence (`ticketStorage.ts`)
+  - [x] Active ticket recovery banner across browser reloads (`ActiveTicketBanner.tsx`)
+  - [x] High-contrast digital ticket tracking pass (`TicketTrackingPage.tsx`, `TicketLiveCard.tsx`)
+  - [x] 4-Stage visual queue journey progress timeline (`QueueProgressTimeline.tsx`)
+  - [x] Dynamic FIFO queue position and humanized estimated wait time displays (`WaitTimeDisplay.tsx`)
+  - [x] Prominent desk callout banner when called to counter (`CounterCallout.tsx`)
+  - [x] Ticket cancellation modal dialog with backend state update (`CancelTicketModal.tsx`)
+  - [x] Mobile-responsive layout, accessibility focus states, and zero polling via Socket.IO realtime subscriptions
+  - [x] Automated unit and integration test suite passing across API and Web packages
 
-- [ ] **Phase 11: Citizen Web App (Queue Status, Token Issuance)**
+- [ ] **Phase 9: Waiting Time Prediction Engine (Pure TS Statistical)**
+- [ ] **Phase 10: Hardware Gate Controller / ESP32 Integration (Firmware & API Gateways)**
+- [ ] **Phase 11: Notification Service (SMS/WhatsApp/Push Alerts)**
 - [ ] **Phase 12: Operator / Counter Dashboard (Calling, Serving, Transferring)**
 - [ ] **Phase 13: Admin Dashboard & Analytics / Heatmaps**
 - [ ] **Phase 14: Simulator & Load Testing Tools**

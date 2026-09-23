@@ -13,10 +13,15 @@ export const servicesRouter = Router();
 // Middleware guard applied to all services routes: ADMIN only
 const adminGuard = [requireAuth, requireRole(UserRole.ADMIN), syncUserMiddleware];
 
-// GET /api/services - List all services
-servicesRouter.get('/api/services', ...adminGuard, async (req: Request, res: Response, next: NextFunction) => {
+// GET /api/services - List services (public returns active only, admin can include inactive)
+servicesRouter.get('/api/services', syncUserMiddleware, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const includeInactive = req.query.includeInactive !== 'false';
+    const auth = req.auth ? (typeof req.auth === 'function' ? req.auth() : req.auth) : undefined;
+    const role = (req.user?.role as string | undefined) || (auth?.sessionClaims?.metadata as { role?: string })?.role || (auth?.sessionClaims?.publicMetadata as { role?: string })?.role;
+    const isAdmin = role?.toUpperCase() === UserRole.ADMIN;
+
+    // Non-admins can only see active services
+    const includeInactive = isAdmin ? req.query.includeInactive !== 'false' : false;
     const services = await servicesService.listServices(includeInactive);
     res.status(200).json(services);
   } catch (err) {
@@ -24,8 +29,8 @@ servicesRouter.get('/api/services', ...adminGuard, async (req: Request, res: Res
   }
 });
 
-// GET /api/services/:id - Get a single service
-servicesRouter.get('/api/services/:id', ...adminGuard, async (req: Request, res: Response, next: NextFunction) => {
+// GET /api/services/:id - Get a single service (public/customer readable)
+servicesRouter.get('/api/services/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const service = await servicesService.getServiceById(id);

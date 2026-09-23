@@ -58,16 +58,34 @@ describe('Services API Integration Tests', () => {
     });
   });
 
-  it('should reject unauthenticated request to GET /api/services with 401', async () => {
+  it('should allow unauthenticated public request to GET /api/services and return active services', async () => {
     const app = createApp();
     const res = await request(app).get('/api/services');
-    assert.equal(res.status, 401);
-    assert.equal(res.body.error, 'Unauthorized');
+    assert.equal(res.status, 200);
+    assert.ok(Array.isArray(res.body));
+    // Verify all returned services are active
+    for (const s of res.body) {
+      assert.equal(s.isActive, true);
+    }
   });
 
-  it('should reject CUSTOMER role request to GET /api/services with 403', async () => {
+  it('should allow CUSTOMER role to GET /api/services and return active services', async () => {
     const customerApp = createCustomerApp();
     const res = await request(customerApp).get('/api/services');
+    assert.equal(res.status, 200);
+    assert.ok(Array.isArray(res.body));
+    for (const s of res.body) {
+      assert.equal(s.isActive, true);
+    }
+  });
+
+  it('should reject CUSTOMER role request to POST /api/services with 403', async () => {
+    const customerApp = createCustomerApp();
+    const res = await request(customerApp).post('/api/services').send({
+      code: 'CUSTX',
+      name: 'Customer Created Service',
+      prefix: 'C',
+    });
     assert.equal(res.status, 403);
     assert.equal(res.body.error, 'Forbidden');
   });

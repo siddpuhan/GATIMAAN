@@ -230,6 +230,17 @@ describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
       const uniqueNumbers = new Set(ticketNumbers);
       assert.equal(uniqueNumbers.size, 3);
     });
+
+    it('should associate authenticated customer user ID when issuing ticket with auth context', async () => {
+      const customerApp = createCustomerApp();
+      const res = await request(customerApp)
+        .post('/api/tickets/issue')
+        .send({ serviceId: activeServiceId });
+
+      assert.equal(res.status, 201);
+      assert.ok(res.body.id);
+      assert.ok(res.body.userId, 'Expected ticket to have associated userId when authenticated');
+    });
   });
 
   describe('Queue Position & Status (GET /api/tickets/:id/position)', () => {
