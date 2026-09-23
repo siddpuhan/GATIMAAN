@@ -250,3 +250,103 @@ All counter management endpoints require `ADMIN` role.
 - **Response**: `200 OK` — `{ "message": "Ticket A001 cancelled successfully", "ticket": TicketDTO }`
 - **Errors**: `409 Conflict` (Not in WAITING or CALLED state), `404 Not Found`
 
+---
+
+## 5. Realtime & Socket.IO Subscriptions (Phase 7)
+
+Socket.IO server operates on the unified HTTP server (`ws://` / `http://` transport with polling fallback).
+
+### Client Subscription Events (Emitted by Client)
+
+#### 1. `ticket:subscribe` / `ticket:unsubscribe`
+- **Payload**: `{ "ticketId": "uuid" }`
+- **Room**: `ticket:<ticketId>`
+- **Acknowledgment Callback**: `(ack: { success: boolean, room: string, message?: string }) => void`
+
+#### 2. `queue:subscribe` / `queue:unsubscribe`
+- **Payload**: `{ "serviceId": "uuid" }`
+- **Room**: `queue:<serviceId>`
+- **Acknowledgment Callback**: `(ack: { success: boolean, room: string, message?: string }) => void`
+
+#### 3. `footfall:subscribe` / `footfall:unsubscribe`
+- **Payload**: `{}`
+- **Room**: `footfall`
+- **Acknowledgment Callback**: `(ack: { success: boolean, room: string, message?: string }) => void`
+
+#### 4. `prediction:subscribe` / `prediction:unsubscribe`
+- **Payload**: `{}`
+- **Room**: `prediction`
+- **Acknowledgment Callback**: `(ack: { success: boolean, room: string, message?: string }) => void`
+
+---
+
+### Realtime Broadcast Events (Emitted by Server)
+
+#### 1. `ticket.updated`
+- **Target Room**: `ticket:<ticketId>`
+- **Trigger**: Ticket issued, called, served, completed, skipped, or cancelled.
+- **Payload**:
+```json
+{
+  "ticket": {
+    "id": "uuid",
+    "ticketNumber": "A001",
+    "serviceId": "uuid",
+    "counterId": "uuid",
+    "userId": "uuid",
+    "status": "CALLED",
+    "priority": 1,
+    "qrCode": null,
+    "issuedAt": "2026-09-23T10:00:00.000Z",
+    "calledAt": "2026-09-23T10:05:00.000Z",
+    "servedAt": null,
+    "completedAt": null,
+    "cancelledAt": null,
+    "estimatedWaitSeconds": null,
+    "service": { ... },
+    "counter": { ... }
+  },
+  "action": "CALLED" // "ISSUED" | "CALLED" | "SERVING" | "COMPLETED" | "SKIPPED" | "CANCELLED"
+}
+```
+
+#### 2. `queue.updated`
+- **Target Room**: `queue:<serviceId>`
+- **Trigger**: Any ticket lifecycle state change for the given service.
+- **Payload**:
+```json
+{
+  "serviceId": "uuid",
+  "waitingCount": 3,
+  "activeCountersCount": 2,
+  "timestamp": "2026-09-23T10:05:00.000Z"
+}
+```
+
+#### 3. `footfall.updated`
+- **Target Room**: `footfall`
+- **Trigger**: Gate sensor entry / exit / scan events.
+- **Payload**:
+```json
+{
+  "eventType": "IN",
+  "gateId": "gate-north-01",
+  "currentOccupancy": 42,
+  "timestamp": "2026-09-23T10:05:00.000Z"
+}
+```
+
+#### 4. `prediction.updated`
+- **Target Room**: `prediction`
+- **Trigger**: Queue prediction recalculations.
+- **Payload**:
+```json
+{
+  "serviceId": "uuid",
+  "predictedWaitSeconds": 300,
+  "demandLevel": "MEDIUM",
+  "timestamp": "2026-09-23T10:05:00.000Z"
+}
+```
+
+
