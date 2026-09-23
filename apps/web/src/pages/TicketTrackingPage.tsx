@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useLocation, Link } from 'react-router-dom';
 import { TicketDTO, QueuePositionDTO, TicketUpdatedPayload } from '@gatimaan/shared';
 import { TicketLiveCard } from '../components/customer/TicketLiveCard.js';
 import { CancelTicketModal } from '../components/customer/CancelTicketModal.js';
@@ -15,10 +15,14 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 export function TicketTrackingPage() {
   const { id: ticketId } = useParams<{ id: string }>();
+  const location = useLocation();
+  const initialTicket = (location.state as { initialTicket?: TicketDTO } | undefined)?.initialTicket;
 
-  const [ticket, setTicket] = useState<TicketDTO | null>(null);
+  const [ticket, setTicket] = useState<TicketDTO | null>(
+    initialTicket && initialTicket.id === ticketId ? initialTicket : null
+  );
   const [positionData, setPositionData] = useState<QueuePositionDTO | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!initialTicket || initialTicket.id !== ticketId);
   const [error, setError] = useState<string | null>(null);
 
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -81,8 +85,22 @@ export function TicketTrackingPage() {
           clearActiveTicketId();
         }
 
-        // Re-fetch position when queue state or status changes
-        if (ticketId) {
+        // When ticket transitions out of WAITING (e.g. CALLED, SERVING, COMPLETED),
+        // position is known to be 0 without requiring a server REST roundtrip.
+        if (payload.ticket.status !== 'WAITING') {
+          setPositionData((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: payload.ticket.status,
+                  position: 0,
+                  aheadCount: 0,
+                  estimatedWaitSeconds: null,
+                }
+              : null
+          );
+        } else if (ticketId) {
+          // Re-fetch position only when still waiting and queue state advances
           fetch(`${API_BASE}/api/tickets/${ticketId}/position`)
             .then((r) => (r.ok ? r.json() : null))
             .then((pos) => {

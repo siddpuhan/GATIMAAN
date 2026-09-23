@@ -116,8 +116,10 @@ export function CustomerPortalPage() {
       // Persist active ticket ID for recovery across reloads
       setActiveTicketId(createdTicket.id);
 
-      // Instant navigate to live ticket tracking pass
-      navigate(`/ticket/${createdTicket.id}`);
+      // Instant navigate to live ticket tracking pass with seeded state
+      navigate(`/ticket/${createdTicket.id}`, {
+        state: { initialTicket: createdTicket },
+      });
     } catch (err: unknown) {
       setIssueError(err instanceof Error ? err.message : 'Failed to generate token');
     } finally {

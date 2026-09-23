@@ -1,8 +1,13 @@
-import React, { useState, useCallback } from 'react';
-import { ServiceDTO, QueueUpdatedPayload } from '@gatimaan/shared';
+import React, { useState, useEffect } from 'react';
+import {
+  ServiceDTO,
+  QueueUpdatedPayload,
+  REALTIME_EVENTS,
+  REALTIME_TOPICS,
+} from '@gatimaan/shared';
 import { ServiceCard } from './ServiceCard.js';
 import { ServiceGridSkeleton } from './LoadingSkeleton.js';
-import { useQueueSubscription } from '../../hooks/useRealtime.js';
+import { getSocket } from '../../lib/socket.js';
 
 interface ServiceGridProps {
   services: ServiceDTO[];
@@ -11,36 +16,6 @@ interface ServiceGridProps {
   issuingServiceId: string | null;
   onIssueTicket: (serviceId: string) => void;
   onRetry: () => void;
-}
-
-// Helper component to manage realtime subscription per service without overhead
-function RealtimeServiceItem({
-  service,
-  isIssuing,
-  onIssueTicket,
-}: {
-  service: ServiceDTO;
-  isIssuing: boolean;
-  onIssueTicket: (serviceId: string) => void;
-}) {
-  const [waitingCount, setWaitingCount] = useState<number | undefined>(undefined);
-
-  const handleQueueUpdate = useCallback((payload: QueueUpdatedPayload) => {
-    if (payload.serviceId === service.id) {
-      setWaitingCount(payload.waitingCount);
-    }
-  }, [service.id]);
-
-  useQueueSubscription(service.id, handleQueueUpdate);
-
-  return (
-    <ServiceCard
-      service={service}
-      waitingCount={waitingCount}
-      isIssuing={isIssuing}
-      onIssueTicket={onIssueTicket}
-    />
-  );
 }
 
 export function ServiceGrid({
@@ -52,6 +27,36 @@ export function ServiceGrid({
   onRetry,
 }: ServiceGridProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [waitingCounts, setWaitingCounts] = useState<Record<string, number>>({});
+
+  // Centralized Socket.IO queue subscription for all active services
+  useEffect(() => {
+    if (!services || services.length === 0) return;
+
+    const socket = getSocket();
+
+    const handleQueueUpdate = (payload: QueueUpdatedPayload) => {
+      if (payload?.serviceId) {
+        setWaitingCounts((prev) => ({
+          ...prev,
+          [payload.serviceId]: payload.waitingCount,
+        }));
+      }
+    };
+
+    services.forEach((s) => {
+      socket.emit(REALTIME_TOPICS.QUEUE_SUBSCRIBE, { serviceId: s.id });
+    });
+
+    socket.on(REALTIME_EVENTS.QUEUE_UPDATED, handleQueueUpdate);
+
+    return () => {
+      socket.off(REALTIME_EVENTS.QUEUE_UPDATED, handleQueueUpdate);
+      services.forEach((s) => {
+        socket.emit(REALTIME_TOPICS.QUEUE_UNSUBSCRIBE, { serviceId: s.id });
+      });
+    };
+  }, [services]);
 
   const filteredServices = services.filter((s) => {
     const q = searchQuery.toLowerCase().trim();
@@ -146,9 +151,10 @@ export function ServiceGrid({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredServices.map((service) => (
-            <RealtimeServiceItem
+            <ServiceCard
               key={service.id}
               service={service}
+              waitingCount={waitingCounts[service.id]}
               isIssuing={issuingServiceId === service.id}
               onIssueTicket={onIssueTicket}
             />

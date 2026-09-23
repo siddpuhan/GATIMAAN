@@ -14,11 +14,16 @@ export const servicesRouter = Router();
 const adminGuard = [requireAuth, requireRole(UserRole.ADMIN), syncUserMiddleware];
 
 // GET /api/services - List services (public returns active only, admin can include inactive)
-servicesRouter.get('/api/services', syncUserMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+servicesRouter.get('/api/services', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const auth = req.auth ? (typeof req.auth === 'function' ? req.auth() : req.auth) : undefined;
-    const role = (req.user?.role as string | undefined) || (auth?.sessionClaims?.metadata as { role?: string })?.role || (auth?.sessionClaims?.publicMetadata as { role?: string })?.role;
-    const isAdmin = role?.toUpperCase() === UserRole.ADMIN;
+    const claims = auth ? (auth.sessionClaims || auth.claims) as Record<string, unknown> | undefined : undefined;
+    const metadata = claims?.metadata as { role?: string } | undefined;
+    const publicMetadata = claims?.publicMetadata as { role?: string } | undefined;
+    const role = (metadata?.role as string | undefined) ||
+                 (publicMetadata?.role as string | undefined) ||
+                 (claims?.role as string | undefined);
+    const isAdmin = typeof role === 'string' && role.toUpperCase() === UserRole.ADMIN;
 
     // Non-admins can only see active services
     const includeInactive = isAdmin ? req.query.includeInactive !== 'false' : false;
