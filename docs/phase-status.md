@@ -42,9 +42,14 @@ This document tracks the progress and verification status across all phases of t
   - [x] Counters domain logic and desk session lifecycle (`open`, `close`, `/status`)
   - [x] Protected React admin interface for Services & Counters management
   - [x] Automated unit and integration test suite passing
-- [ ] **Phase 5: Core Queue Engine & State Machine**
-
-- [ ] **Phase 6: Service Counters & Token Calling Flow**
+- [x] **Phase 6: Core Queue Engine & State Machine**
+  - [x] Concurrency-safe daily sequential ticket generation per service (`FOR UPDATE` row lock)
+  - [x] Dynamic FIFO & priority queue position estimation
+  - [x] Concurrency-safe next token dequeue (`SELECT ... FOR UPDATE SKIP LOCKED`)
+  - [x] Authenticated desk session validation & operator identity enforcement
+  - [x] Strict state machine lifecycle transitions (`WAITING`, `CALLED`, `SERVING`, `COMPLETED`, `NO_SHOW`, `CANCELLED`)
+  - [x] Counter ownership and duplicate active token protections
+  - [x] Comprehensive automated unit & high-concurrency integration test suite
 - [ ] **Phase 7: Waiting Time Prediction Engine (Pure TS Statistical)**
 - [ ] **Phase 8: Real-Time Event Bus & Socket.IO Server**
 - [ ] **Phase 9: Hardware Gate Controller / ESP32 Integration (Firmware & API Gateways)**

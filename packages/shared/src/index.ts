@@ -171,3 +171,70 @@ export interface CounterWithSessionDTO extends CounterDTO {
   currentSession: CounterSessionDTO | null;
 }
 
+// ---------------------------------------------------------------------------
+// Zod Schemas & DTO Types for Queue Engine & Tickets (Phase 6)
+// ---------------------------------------------------------------------------
+
+export const IssueTicketSchema = z.object({
+  serviceId: z.string().uuid('Valid service ID is required'),
+  priority: z.number().int().min(1, 'Priority must be at least 1').default(1),
+});
+
+export type IssueTicketInput = z.infer<typeof IssueTicketSchema>;
+
+export const CallNextTicketSchema = z.object({
+  counterId: z.string().uuid('Valid counter ID is required'),
+  serviceId: z.string().uuid('Valid service ID must be UUID').optional(),
+});
+
+export type CallNextTicketInput = z.infer<typeof CallNextTicketSchema>;
+
+export const DeskActionSchema = z.object({
+  counterId: z.string().uuid('Valid counter ID is required'),
+});
+
+export type DeskActionInput = z.infer<typeof DeskActionSchema>;
+
+export interface TicketDTO {
+  id: string;
+  ticketNumber: string;
+  serviceId: string;
+  counterId: string | null;
+  userId: string | null;
+  status: TicketStatus;
+  priority: number;
+  qrCode: string | null;
+  issuedAt: Date | string;
+  calledAt: Date | string | null;
+  servedAt: Date | string | null;
+  completedAt: Date | string | null;
+  cancelledAt: Date | string | null;
+  estimatedWaitSeconds: number | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  service?: {
+    id: string;
+    code: string;
+    name: string;
+    prefix: string;
+    avgDurationMinutes: number;
+  };
+  counter?: {
+    id: string;
+    counterNumber: number;
+    name: string;
+  } | null;
+}
+
+export interface QueuePositionDTO {
+  ticketId: string;
+  ticketNumber: string;
+  serviceId: string;
+  serviceName: string;
+  status: TicketStatus;
+  position: number;
+  aheadCount: number;
+  estimatedWaitSeconds: number | null;
+  issuedAt: Date | string;
+}
+
