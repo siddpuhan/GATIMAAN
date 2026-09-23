@@ -50,10 +50,18 @@ This document tracks the progress and verification status across all phases of t
   - [x] Strict state machine lifecycle transitions (`WAITING`, `CALLED`, `SERVING`, `COMPLETED`, `NO_SHOW`, `CANCELLED`)
   - [x] Counter ownership and duplicate active token protections
   - [x] Comprehensive automated unit & high-concurrency integration test suite
-- [ ] **Phase 7: Waiting Time Prediction Engine (Pure TS Statistical)**
-- [ ] **Phase 8: Real-Time Event Bus & Socket.IO Server**
+- [x] **Phase 7: Realtime & Socket.IO Event Infrastructure**
+  - [x] Pinned `socket.io` and `socket.io-client` dependencies
+  - [x] Shared realtime event contracts, topics, and payload DTOs in `@gatimaan/shared`
+  - [x] Typed in-process `AppEventBus` for domain decoupling
+  - [x] Unified HTTP + Socket.IO server initialization with room management (`ticket:<id>`, `queue:<id>`, `footfall`, `prediction`)
+  - [x] Post-transaction domain event dispatching from `QueueService`
+  - [x] Client-side connection singleton and React subscription hooks (`useTicketSubscription`, `useQueueSubscription`, etc.)
+  - [x] Comprehensive realtime integration test suite with room ACKs, lifecycle broadcasts, and transaction rollback protections
+- [ ] **Phase 8: Waiting Time Prediction Engine (Pure TS Statistical)**
 - [ ] **Phase 9: Hardware Gate Controller / ESP32 Integration (Firmware & API Gateways)**
 - [ ] **Phase 10: Notification Service (SMS/WhatsApp/Push Alerts)**
+
 - [ ] **Phase 11: Citizen Web App (Queue Status, Token Issuance)**
 - [ ] **Phase 12: Operator / Counter Dashboard (Calling, Serving, Transferring)**
 - [ ] **Phase 13: Admin Dashboard & Analytics / Heatmaps**

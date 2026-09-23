@@ -238,3 +238,72 @@ export interface QueuePositionDTO {
   issuedAt: Date | string;
 }
 
+// ---------------------------------------------------------------------------
+// Realtime Events & Subscription Contracts (Phase 7)
+// ---------------------------------------------------------------------------
+
+export const REALTIME_EVENTS = {
+  TICKET_UPDATED: 'ticket.updated',
+  QUEUE_UPDATED: 'queue.updated',
+  FOOTFALL_UPDATED: 'footfall.updated',
+  PREDICTION_UPDATED: 'prediction.updated',
+} as const;
+
+export type RealtimeEventName = (typeof REALTIME_EVENTS)[keyof typeof REALTIME_EVENTS];
+
+export const REALTIME_TOPICS = {
+  TICKET_SUBSCRIBE: 'ticket:subscribe',
+  TICKET_UNSUBSCRIBE: 'ticket:unsubscribe',
+  QUEUE_SUBSCRIBE: 'queue:subscribe',
+  QUEUE_UNSUBSCRIBE: 'queue:unsubscribe',
+  FOOTFALL_SUBSCRIBE: 'footfall:subscribe',
+  FOOTFALL_UNSUBSCRIBE: 'footfall:unsubscribe',
+  PREDICTION_SUBSCRIBE: 'prediction:subscribe',
+  PREDICTION_UNSUBSCRIBE: 'prediction:unsubscribe',
+} as const;
+
+export type RealtimeTopic = (typeof REALTIME_TOPICS)[keyof typeof REALTIME_TOPICS];
+
+export type TicketActionType = 'ISSUED' | 'CALLED' | 'SERVING' | 'COMPLETED' | 'SKIPPED' | 'CANCELLED';
+
+export interface TicketUpdatedPayload {
+  ticket: TicketDTO;
+  action: TicketActionType;
+}
+
+export interface QueueUpdatedPayload {
+  serviceId: string;
+  waitingCount: number;
+  activeCountersCount: number;
+  timestamp: string;
+}
+
+export interface FootfallUpdatedPayload {
+  eventType: FootfallEventType;
+  gateId: string;
+  currentOccupancy: number;
+  timestamp: string;
+}
+
+export interface PredictionUpdatedPayload {
+  serviceId: string;
+  predictedWaitSeconds: number;
+  demandLevel: DemandLevel;
+  timestamp: string;
+}
+
+export interface TicketSubscriptionInput {
+  ticketId: string;
+}
+
+export interface QueueSubscriptionInput {
+  serviceId: string;
+}
+
+export interface SubscriptionAck {
+  success: boolean;
+  room: string;
+  message?: string;
+}
+
+
