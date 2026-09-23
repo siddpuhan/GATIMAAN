@@ -85,3 +85,38 @@ Do NOT introduce any of the following:
 - At phase completion, run lint, typecheck, tests, build, and required manual verification.
 - Push the phase branch only after verification.
 - The human/project lead decides when the phase branch is merged into `main`.
+
+## Command Execution & Development Workflow
+
+### Safe command execution
+- Prefer existing package scripts from package.json.
+- Prefer:
+  - npm run lint
+  - npm run typecheck
+  - npm test
+  - npm run build
+  - npm run dev
+- Batch related read-only verification commands when practical.
+- Avoid repeated ad-hoc `npx tsx --eval` commands when an existing script can perform the same check.
+- Do not repeatedly rerun the same diagnostic after the result is already known unless the underlying state has changed.
+
+### Secrets & Credentials
+- NEVER place DATABASE_URL, database passwords, Clerk secrets, API keys, tokens, or other credentials directly inside shell commands.
+- NEVER print secrets to terminal output.
+- NEVER include credentials in generated code, logs, screenshots, commits, or documentation.
+- Use existing environment variables from `.env` / `.env.local`.
+- If a diagnostic requires a connection string, load it from the environment rather than constructing it inline.
+
+### Destructive / Sensitive Operations
+Always require explicit human approval before:
+- database migrations
+- destructive database operations
+- deleting files
+- changing production configuration
+- changing authentication/security configuration
+- git push
+- creating/merging pull requests
+- deployment
+
+### Non-destructive development
+For normal project inspection and verification, use existing project tooling and avoid unnecessary command prompts.
