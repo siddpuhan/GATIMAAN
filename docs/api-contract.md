@@ -163,3 +163,90 @@ All counter management endpoints require `ADMIN` role.
 ```
 - **Errors**: `409 Conflict` (No active open session), `404 Not Found`
 
+---
+
+## 4. Queue & Ticket Engine Endpoints (Phase 6)
+
+### `POST /api/tickets/issue`
+- **Auth**: Public / Optional `requireAuth`
+- **Description**: Issues a sequential, race-free token for the specified active service.
+- **Request Body**:
+```json
+{
+  "serviceId": "uuid",
+  "priority": 1
+}
+```
+- **Response**: `201 Created` — `TicketDTO`
+- **Errors**: `400 Bad Request` (Inactive service or invalid payload), `404 Not Found` (Nonexistent service)
+
+### `GET /api/tickets/:id`
+- **Auth**: Public / Optional `requireAuth`
+- **Description**: Fetches ticket status and details.
+- **Response**: `200 OK` — `TicketDTO` | `404 Not Found`
+
+### `GET /api/tickets/:id/position`
+- **Auth**: Public / Optional `requireAuth`
+- **Description**: Computes real-time dynamic queue position and tickets ahead count.
+- **Response**: `200 OK` — `QueuePositionDTO`
+```json
+{
+  "ticketId": "uuid",
+  "ticketNumber": "A001",
+  "serviceId": "uuid",
+  "serviceName": "Aadhaar Card Services",
+  "status": "WAITING",
+  "position": 1,
+  "aheadCount": 0,
+  "estimatedWaitSeconds": 0,
+  "issuedAt": "2026-09-23T10:00:00.000Z"
+}
+```
+- **Errors**: `404 Not Found`
+
+### `POST /api/tickets/call-next`
+- **Auth**: `requireAuth`, `requireRole(UserRole.ADMIN)`
+- **Description**: Atomically dequeues the next waiting ticket (`SELECT ... FOR UPDATE SKIP LOCKED`) and assigns it to the operator's active desk session.
+- **Request Body**:
+```json
+{
+  "counterId": "uuid",
+  "serviceId": "uuid" // optional, defaults to all waiting tickets
+}
+```
+- **Response**: `200 OK`
+```json
+{
+  "message": "Ticket A001 called to counter",
+  "ticket": { ... }
+}
+```
+- **Errors**: `400 Bad Request` (Inactive counter), `409 Conflict` (No active operator session or desk already has active ticket)
+
+### `POST /api/tickets/:id/serve`
+- **Auth**: `requireAuth`, `requireRole(UserRole.ADMIN)`
+- **Description**: Transitions ticket from `CALLED` to `SERVING`.
+- **Request Body**: `{ "counterId": "uuid" }`
+- **Response**: `200 OK` — `{ "message": "Serving ticket A001", "ticket": TicketDTO }`
+- **Errors**: `409 Conflict` (Not in CALLED state or wrong counter)
+
+### `POST /api/tickets/:id/complete`
+- **Auth**: `requireAuth`, `requireRole(UserRole.ADMIN)`
+- **Description**: Transitions ticket from `SERVING` to `COMPLETED`.
+- **Request Body**: `{ "counterId": "uuid" }`
+- **Response**: `200 OK` — `{ "message": "Ticket A001 completed successfully", "ticket": TicketDTO }`
+- **Errors**: `409 Conflict` (Not in SERVING state or wrong counter)
+
+### `POST /api/tickets/:id/skip`
+- **Auth**: `requireAuth`, `requireRole(UserRole.ADMIN)`
+- **Description**: Transitions ticket from `CALLED` to `NO_SHOW`.
+- **Request Body**: `{ "counterId": "uuid" }`
+- **Response**: `200 OK` — `{ "message": "Ticket A001 marked as no-show / skipped", "ticket": TicketDTO }`
+- **Errors**: `409 Conflict` (Not in CALLED state or wrong counter)
+
+### `POST /api/tickets/:id/cancel`
+- **Auth**: Public / Optional `requireAuth`
+- **Description**: Transitions ticket from `WAITING` or `CALLED` to `CANCELLED`.
+- **Response**: `200 OK` — `{ "message": "Ticket A001 cancelled successfully", "ticket": TicketDTO }`
+- **Errors**: `409 Conflict` (Not in WAITING or CALLED state), `404 Not Found`
+

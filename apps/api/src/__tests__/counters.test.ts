@@ -49,17 +49,17 @@ describe('Counters and Counter Sessions API Integration Tests', () => {
   let createdCounterId: string;
 
   after(async () => {
-    // Clean up counter sessions for test counters
-    await prisma.counterSession.deleteMany({
-      where: {
-        counter: { counterNumber: { gte: 9000 } },
-      },
-    });
+    if (createdCounterId) {
+      // Clean up counter sessions for test counter
+      await prisma.counterSession.deleteMany({
+        where: { counterId: createdCounterId },
+      });
 
-    // Clean up test counters
-    await prisma.counter.deleteMany({
-      where: { counterNumber: { gte: 9000 } },
-    });
+      // Clean up test counter
+      await prisma.counter.deleteMany({
+        where: { id: createdCounterId },
+      });
+    }
 
     // Clean up test users
     await prisma.user.deleteMany({

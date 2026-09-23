@@ -6,6 +6,7 @@ import { healthRouter } from './routes/health.js';
 import { authRouter } from './routes/auth.js';
 import { servicesRouter } from './routes/services.js';
 import { countersRouter } from './routes/counters.js';
+import { ticketsRouter } from './routes/tickets.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 
 export function createApp(): Express {
@@ -34,6 +35,7 @@ export function createApp(): Express {
   app.use('/', authRouter);
   app.use('/', servicesRouter);
   app.use('/', countersRouter);
+  app.use('/', ticketsRouter);
 
 
   // Error handling
