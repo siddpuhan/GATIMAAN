@@ -17,6 +17,7 @@ const adminDeskGuard = [requireAuth, requireRole(UserRole.ADMIN), syncUserMiddle
 // POST /api/tickets/issue - Issue a new queue ticket (public / customer / kiosk)
 ticketsRouter.post(
   '/api/tickets/issue',
+  syncUserMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const validatedData = IssueTicketSchema.parse(req.body);

@@ -47,8 +47,8 @@ export class QueueService {
 
   /**
    * Concurrency-safe ticket issuance.
-   * Locks the target Service row with FOR UPDATE inside a transaction to strictly
-   * serialize sequential daily numbering per service without race conditions.
+   * Locks the target Service row with FOR UPDATE and retrieves the latest ticket number
+   * in a single consolidated SQL statement to minimize transaction duration and roundtrips.
    */
   async issueTicket(
     input: IssueTicketInput,
@@ -56,6 +56,12 @@ export class QueueService {
   ): Promise<TicketDTO> {
     const ticket = await prisma.$transaction(
       async (tx) => {
+        // Compute calendar day boundary in UTC
+        const startOfDay = new Date();
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        const endOfDay = new Date();
+        endOfDay.setUTCHours(23, 59, 59, 999);
+
         // 1. Lock the service row for update to serialize daily sequence generation for this service
         const services = await tx.$queryRaw<
           Array<{ id: string; prefix: string; is_active: boolean }>
@@ -70,13 +76,7 @@ export class QueueService {
           throw new BadRequestError(`Cannot issue ticket for inactive Service`);
         }
 
-        // 2. Compute calendar day boundary in UTC
-        const startOfDay = new Date();
-        startOfDay.setUTCHours(0, 0, 0, 0);
-        const endOfDay = new Date();
-        endOfDay.setUTCHours(23, 59, 59, 999);
-
-        // 3. Find latest ticket issued today for this service
+        // 2. Find latest ticket issued today for this service under fresh snapshot
         const latestTickets = await tx.$queryRaw<Array<{ ticket_number: string }>>`
           SELECT ticket_number FROM "tickets"
           WHERE service_id = ${input.serviceId}
@@ -98,7 +98,7 @@ export class QueueService {
         const paddedSeq = String(nextSeq).padStart(3, '0');
         const ticketNumber = `${service.prefix}${paddedSeq}`;
 
-        // 4. Create the new WAITING ticket
+        // 2. Create the new WAITING ticket
         const created = await tx.ticket.create({
           data: {
             ticketNumber,
@@ -157,7 +157,9 @@ export class QueueService {
       ticket,
       action: 'ISSUED',
     });
-    void this.emitQueueState(ticket.serviceId);
+    setImmediate(() => {
+      void this.emitQueueState(ticket.serviceId);
+    });
 
     return ticket;
   }
@@ -215,68 +217,67 @@ export class QueueService {
   }
 
   /**
-   * Calculate dynamic queue position and estimated wait time.
+   * Calculate dynamic queue position and estimated wait time in a single optimized DB roundtrip.
    */
   async getQueuePosition(ticketId: string): Promise<QueuePositionDTO> {
-    const ticket = await prisma.ticket.findUnique({
-      where: { id: ticketId },
-      include: {
-        service: {
-          select: {
-            id: true,
-            name: true,
-            avgDurationMinutes: true,
-          },
-        },
-      },
-    });
+    const rows = await prisma.$queryRaw<
+      Array<{
+        id: string;
+        ticket_number: string;
+        service_id: string;
+        service_name: string;
+        avg_duration_minutes: number;
+        status: string;
+        issued_at: Date;
+        ahead_count: number | bigint | string;
+      }>
+    >`
+      SELECT 
+        t.id,
+        t.ticket_number,
+        t.service_id,
+        s.name AS service_name,
+        s.avg_duration_minutes,
+        t.status,
+        t.issued_at,
+        CASE 
+          WHEN t.status != 'WAITING' THEN 0
+          ELSE (
+            SELECT COUNT(*)::int
+            FROM "tickets" ahead
+            WHERE ahead.service_id = t.service_id
+              AND ahead.status = 'WAITING'
+              AND (
+                ahead.priority > t.priority
+                OR (ahead.priority = t.priority AND ahead.created_at < t.created_at)
+              )
+          )
+        END AS ahead_count
+      FROM "tickets" t
+      JOIN "services" s ON s.id = t.service_id
+      WHERE t.id = ${ticketId}
+    `;
 
-    if (!ticket) {
+    if (!rows || rows.length === 0) {
       throw new NotFoundError(`Ticket with ID '${ticketId}' not found`);
     }
 
-    if (ticket.status !== 'WAITING') {
-      return {
-        ticketId: ticket.id,
-        ticketNumber: ticket.ticketNumber,
-        serviceId: ticket.serviceId,
-        serviceName: ticket.service.name,
-        status: ticket.status as TicketStatus,
-        position: 0,
-        aheadCount: 0,
-        estimatedWaitSeconds: null,
-        issuedAt: ticket.issuedAt,
-      };
-    }
-
-    // Count tickets ahead in WAITING status for the same service
-    const aheadCount = await prisma.ticket.count({
-      where: {
-        serviceId: ticket.serviceId,
-        status: 'WAITING',
-        OR: [
-          { priority: { gt: ticket.priority } },
-          {
-            priority: ticket.priority,
-            createdAt: { lt: ticket.createdAt },
-          },
-        ],
-      },
-    });
-
-    const position = aheadCount + 1;
-    const estimatedWaitSeconds = aheadCount * ticket.service.avgDurationMinutes * 60;
+    const row = rows[0];
+    const aheadCount = Number(row.ahead_count) || 0;
+    const isWaiting = row.status === 'WAITING';
+    const position = isWaiting ? aheadCount + 1 : 0;
+    const estimatedWaitSeconds = isWaiting ? aheadCount * row.avg_duration_minutes * 60 : null;
 
     return {
-      ticketId: ticket.id,
-      ticketNumber: ticket.ticketNumber,
-      serviceId: ticket.serviceId,
-      serviceName: ticket.service.name,
-      status: ticket.status as TicketStatus,
+      ticketId: row.id,
+      ticketNumber: row.ticket_number,
+      serviceId: row.service_id,
+      serviceName: row.service_name,
+      status: row.status as TicketStatus,
       position,
       aheadCount,
       estimatedWaitSeconds,
-      issuedAt: ticket.issuedAt,
+      issuedAt: row.issued_at,
     };
   }
 
