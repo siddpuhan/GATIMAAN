@@ -247,6 +247,7 @@ export const REALTIME_EVENTS = {
   QUEUE_UPDATED: 'queue.updated',
   FOOTFALL_UPDATED: 'footfall.updated',
   PREDICTION_UPDATED: 'prediction.updated',
+  SERVICE_UPDATED: 'service.updated',
 } as const;
 
 export type RealtimeEventName = (typeof REALTIME_EVENTS)[keyof typeof REALTIME_EVENTS];
@@ -260,6 +261,8 @@ export const REALTIME_TOPICS = {
   FOOTFALL_UNSUBSCRIBE: 'footfall:unsubscribe',
   PREDICTION_SUBSCRIBE: 'prediction:subscribe',
   PREDICTION_UNSUBSCRIBE: 'prediction:unsubscribe',
+  SERVICES_SUBSCRIBE: 'services:subscribe',
+  SERVICES_UNSUBSCRIBE: 'services:unsubscribe',
 } as const;
 
 export type RealtimeTopic = (typeof REALTIME_TOPICS)[keyof typeof REALTIME_TOPICS];
@@ -277,6 +280,14 @@ export interface QueueUpdatedPayload {
   activeCountersCount: number;
   estimatedWaitSeconds?: number | null;
   demandLevel?: DemandLevel;
+  timestamp: string;
+}
+
+export type ServiceActionType = 'CREATED' | 'UPDATED' | 'STATUS_CHANGED';
+
+export interface ServiceUpdatedPayload {
+  service: ServiceDTO;
+  action: ServiceActionType;
   timestamp: string;
 }
 
