@@ -85,7 +85,6 @@ export class ServicesService {
     eventBus.emit(REALTIME_EVENTS.SERVICE_UPDATED, {
       service: dto,
       action: 'CREATED',
-      timestamp: new Date().toISOString(),
     });
 
     return dto;
@@ -132,7 +131,6 @@ export class ServicesService {
     eventBus.emit(REALTIME_EVENTS.SERVICE_UPDATED, {
       service: dto,
       action: 'UPDATED',
-      timestamp: new Date().toISOString(),
     });
 
     return dto;
@@ -162,7 +160,6 @@ export class ServicesService {
     eventBus.emit(REALTIME_EVENTS.SERVICE_UPDATED, {
       service: dto,
       action: 'STATUS_CHANGED',
-      timestamp: new Date().toISOString(),
     });
 
     return dto;

@@ -288,7 +288,6 @@ export type ServiceActionType = 'CREATED' | 'UPDATED' | 'STATUS_CHANGED';
 export interface ServiceUpdatedPayload {
   service: ServiceDTO;
   action: ServiceActionType;
-  timestamp: string;
 }
 
 export interface FootfallUpdatedPayload {
