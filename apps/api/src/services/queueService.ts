@@ -161,33 +161,52 @@ export class QueueService {
   }
 
   /**
-   * Retrieve ticket by ID.
+   * Retrieve ticket by database UUID or human-facing ticketNumber.
    */
-  async getTicketById(ticketId: string): Promise<TicketDTO> {
-    const ticket = await prisma.ticket.findUnique({
-      where: { id: ticketId },
-      include: {
-        service: {
-          select: {
-            id: true,
-            code: true,
-            name: true,
-            prefix: true,
-            avgDurationMinutes: true,
-          },
-        },
-        counter: {
-          select: {
-            id: true,
-            counterNumber: true,
-            name: true,
-          },
+  async getTicketById(identifier: string): Promise<TicketDTO> {
+    const cleanId = identifier.trim();
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanId);
+
+    const ticketInclude = {
+      service: {
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          prefix: true,
+          avgDurationMinutes: true,
         },
       },
-    });
+      counter: {
+        select: {
+          id: true,
+          counterNumber: true,
+          name: true,
+        },
+      },
+    };
+
+    let ticket = null;
+    if (isUuid) {
+      ticket = await prisma.ticket.findUnique({
+        where: { id: cleanId },
+        include: ticketInclude,
+      });
+    }
+
+    // Fallback or non-UUID lookup by ticketNumber (case-insensitive, newest first)
+    if (!ticket) {
+      ticket = await prisma.ticket.findFirst({
+        where: {
+          ticketNumber: { equals: cleanId, mode: 'insensitive' },
+        },
+        orderBy: { createdAt: 'desc' },
+        include: ticketInclude,
+      });
+    }
 
     if (!ticket) {
-      throw new NotFoundError(`Ticket with ID '${ticketId}' not found`);
+      throw new NotFoundError(`Ticket with ID '${identifier}' not found`);
     }
 
     return {
@@ -214,8 +233,11 @@ export class QueueService {
 
   /**
    * Calculate dynamic queue position and estimated wait time in a single optimized DB roundtrip.
+   * Supports lookup by database UUID or human-facing ticketNumber.
    */
-  async getQueuePosition(ticketId: string): Promise<QueuePositionDTO> {
+  async getQueuePosition(identifier: string): Promise<QueuePositionDTO> {
+    const cleanId = identifier.trim();
+
     const rows = await prisma.$queryRaw<
       Array<{
         id: string;
@@ -255,11 +277,13 @@ export class QueueService {
         END AS ahead_count
       FROM "tickets" t
       JOIN "services" s ON s.id = t.service_id
-      WHERE t.id = ${ticketId}
+      WHERE t.id = ${cleanId} OR UPPER(t.ticket_number) = UPPER(${cleanId})
+      ORDER BY t.created_at DESC
+      LIMIT 1
     `;
 
     if (!rows || rows.length === 0) {
-      throw new NotFoundError(`Ticket with ID '${ticketId}' not found`);
+      throw new NotFoundError(`Ticket with ID '${identifier}' not found`);
     }
 
     const row = rows[0];
@@ -772,19 +796,28 @@ export class QueueService {
 
   /**
    * Transition ticket from WAITING or CALLED to CANCELLED.
+   * Supports lookup by database UUID or human-facing ticketNumber.
    */
   async cancelTicket(
-    ticketId: string,
+    identifier: string,
     _userId?: string | null
   ): Promise<TicketDTO> {
+    const cleanId = identifier.trim();
+
     const ticket = await prisma.$transaction(
       async (tx) => {
         const tickets = await tx.$queryRaw<
           Array<{ id: string; status: string }>
-        >`SELECT id, status FROM "tickets" WHERE id = ${ticketId} FOR UPDATE`;
+        >`
+          SELECT id, status FROM "tickets"
+          WHERE id = ${cleanId} OR UPPER(ticket_number) = UPPER(${cleanId})
+          ORDER BY created_at DESC
+          LIMIT 1
+          FOR UPDATE
+        `;
 
         if (!tickets || tickets.length === 0) {
-          throw new NotFoundError(`Ticket with ID '${ticketId}' not found`);
+          throw new NotFoundError(`Ticket with ID '${identifier}' not found`);
         }
 
         const t = tickets[0];
@@ -796,7 +829,7 @@ export class QueueService {
         }
 
         const cancelled = await tx.ticket.update({
-          where: { id: ticketId },
+          where: { id: t.id },
           data: {
             status: 'CANCELLED',
             cancelledAt: new Date(),

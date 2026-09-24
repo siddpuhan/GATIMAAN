@@ -74,9 +74,19 @@ export function TicketTrackingPage() {
   }, [ticketId, fetchTicketData]);
 
   // 2. Realtime Ticket Subscription via Socket.IO
+  // Ensure subscription strictly uses the resolved database UUID (never raw token string like A001)
+  const isUuidParam = ticketId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticketId);
+  const resolvedTicketId = ticket?.id || (isUuidParam ? ticketId : null);
+
   const handleRealtimeUpdate = useCallback(
     (payload: TicketUpdatedPayload) => {
-      if (payload.ticket && payload.ticket.id === ticketId) {
+      if (
+        payload.ticket &&
+        (payload.ticket.id === resolvedTicketId ||
+          payload.ticket.id === ticket?.id ||
+          payload.ticket.id === ticketId ||
+          (ticketId && payload.ticket.ticketNumber.toUpperCase() === ticketId.toUpperCase()))
+      ) {
         setTicket(payload.ticket);
 
         if (isActiveStatus(payload.ticket.status)) {
@@ -99,33 +109,37 @@ export function TicketTrackingPage() {
                 }
               : null
           );
-        } else if (ticketId) {
-          // Re-fetch position only when still waiting and queue state advances
-          fetch(`${API_BASE}/api/tickets/${ticketId}/position`)
-            .then((r) => (r.ok ? r.json() : null))
-            .then((pos) => {
-              if (pos) setPositionData(pos);
-            })
-            .catch(() => {
-              // Ignore background fetch error
-            });
+        } else {
+          const fetchTargetId = payload.ticket.id || resolvedTicketId || ticketId;
+          if (fetchTargetId) {
+            // Re-fetch position only when still waiting and queue state advances
+            fetch(`${API_BASE}/api/tickets/${fetchTargetId}/position`)
+              .then((r) => (r.ok ? r.json() : null))
+              .then((pos) => {
+                if (pos) setPositionData(pos);
+              })
+              .catch(() => {
+                // Ignore background fetch error
+              });
+          }
         }
       }
     },
-    [ticketId]
+    [resolvedTicketId, ticket?.id, ticketId]
   );
 
-  useTicketSubscription(ticketId, handleRealtimeUpdate);
+  useTicketSubscription(resolvedTicketId, handleRealtimeUpdate);
 
   // 3. Cancel Ticket Handler
   const handleConfirmCancel = async () => {
-    if (!ticketId) return;
+    const targetId = ticket?.id || ticketId;
+    if (!targetId) return;
 
     try {
       setIsCancelling(true);
       setCancelError(null);
 
-      const res = await fetch(`${API_BASE}/api/tickets/${ticketId}/cancel`, {
+      const res = await fetch(`${API_BASE}/api/tickets/${targetId}/cancel`, {
         method: 'POST',
       });
 
