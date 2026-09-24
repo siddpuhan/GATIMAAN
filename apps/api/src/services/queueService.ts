@@ -7,6 +7,7 @@ import {
 } from '@gatimaan/shared';
 import { prisma } from '../db/client.js';
 import { eventBus } from '../events/eventBus.js';
+import { etaService } from './etaService.js';
 import {
   NotFoundError,
   ConflictError,
@@ -20,24 +21,14 @@ export class QueueService {
    */
   private async emitQueueState(serviceId: string): Promise<void> {
     try {
-      const waitingCount = await prisma.ticket.count({
-        where: {
-          serviceId,
-          status: 'WAITING',
-        },
-      });
-
-      const activeCountersCount = await prisma.counterSession.count({
-        where: {
-          isActive: true,
-          endedAt: null,
-        },
-      });
+      const eta = await etaService.calculateServiceEta(serviceId);
 
       eventBus.emit(REALTIME_EVENTS.QUEUE_UPDATED, {
         serviceId,
-        waitingCount,
-        activeCountersCount,
+        waitingCount: eta.waitingCount,
+        activeCountersCount: eta.activeCountersCount,
+        estimatedWaitSeconds: eta.estimatedWaitSeconds,
+        demandLevel: eta.demandLevel,
         timestamp: new Date().toISOString(),
       });
     } catch (err) {
@@ -54,6 +45,10 @@ export class QueueService {
     input: IssueTicketInput,
     userId?: string | null
   ): Promise<TicketDTO> {
+    // 1. Compute initial dynamic estimated wait time for the newly issued ticket
+    const initialEta = await etaService.calculateServiceEta(input.serviceId);
+    const estimatedWaitSeconds = initialEta.estimatedWaitSeconds;
+
     const ticket = await prisma.$transaction(
       async (tx) => {
         // Compute calendar day boundary in UTC
@@ -98,7 +93,7 @@ export class QueueService {
         const paddedSeq = String(nextSeq).padStart(3, '0');
         const ticketNumber = `${service.prefix}${paddedSeq}`;
 
-        // 2. Create the new WAITING ticket
+        // 3. Create the new WAITING ticket with estimatedWaitSeconds populated
         const created = await tx.ticket.create({
           data: {
             ticketNumber,
@@ -107,6 +102,7 @@ export class QueueService {
             priority: input.priority ?? 1,
             status: 'WAITING',
             issuedAt: new Date(),
+            estimatedWaitSeconds,
           },
           include: {
             service: {
@@ -228,6 +224,8 @@ export class QueueService {
         service_name: string;
         avg_duration_minutes: number;
         status: string;
+        priority: number;
+        created_at: Date;
         issued_at: Date;
         ahead_count: number | bigint | string;
       }>
@@ -239,6 +237,8 @@ export class QueueService {
         s.name AS service_name,
         s.avg_duration_minutes,
         t.status,
+        t.priority,
+        t.created_at,
         t.issued_at,
         CASE 
           WHEN t.status != 'WAITING' THEN 0
@@ -266,7 +266,18 @@ export class QueueService {
     const aheadCount = Number(row.ahead_count) || 0;
     const isWaiting = row.status === 'WAITING';
     const position = isWaiting ? aheadCount + 1 : 0;
-    const estimatedWaitSeconds = isWaiting ? aheadCount * row.avg_duration_minutes * 60 : null;
+
+    let estimatedWaitSeconds: number | null = null;
+    if (isWaiting) {
+      const eta = await etaService.calculateTicketEta({
+        ticketId: row.id,
+        serviceId: row.service_id,
+        priority: row.priority,
+        createdAt: row.created_at,
+        aheadCount,
+      });
+      estimatedWaitSeconds = eta.estimatedWaitSeconds;
+    }
 
     return {
       ticketId: row.id,
