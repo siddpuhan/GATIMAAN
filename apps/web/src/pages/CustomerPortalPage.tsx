@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
-import { ServiceDTO, TicketDTO } from '@gatimaan/shared';
+import { ServiceDTO, TicketDTO, ServiceUpdatedPayload } from '@gatimaan/shared';
 import { ServiceGrid } from '../components/customer/ServiceGrid.js';
 import { ActiveTicketBanner } from '../components/customer/ActiveTicketBanner.js';
+import { useServicesSubscription } from '../hooks/useRealtime.js';
 import {
   getActiveTicketId,
   setActiveTicketId,
@@ -81,6 +82,29 @@ export function CustomerPortalPage() {
     fetchServices();
     checkActiveTicket();
   }, [fetchServices, checkActiveTicket]);
+
+  // Realtime Service Catalog Subscription (instant reflection when admin creates/edits/toggles services)
+  const handleServiceUpdated = useCallback((payload: ServiceUpdatedPayload) => {
+    if (!payload?.service) return;
+    setServices((prev) => {
+      const updated = payload.service;
+      const exists = prev.some((s) => s.id === updated.id);
+
+      if (!updated.isActive) {
+        return prev.filter((s) => s.id !== updated.id);
+      }
+
+      if (exists) {
+        return prev.map((s) => (s.id === updated.id ? updated : s));
+      }
+
+      return [...prev, updated].sort(
+        (a, b) => a.priority - b.priority || a.code.localeCompare(b.code)
+      );
+    });
+  }, []);
+
+  useServicesSubscription(handleServiceUpdated);
 
   // 3. Issue a digital queue ticket
   const handleIssueTicket = async (serviceId: string) => {
@@ -224,7 +248,7 @@ export function CustomerPortalPage() {
         <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-3">
           <h3 className="text-sm font-bold text-gray-900">Already Have a Token?</h3>
           <p className="text-xs text-gray-500">
-            Enter your Ticket ID to open your live pass on this device.
+            Enter your Token Number (e.g. DOM001) or Ticket ID to track your live queue position.
           </p>
           <form onSubmit={handleLookupSubmit} className="space-y-2">
             <input
@@ -234,8 +258,8 @@ export function CustomerPortalPage() {
                 setLookupId(e.target.value);
                 setLookupError(null);
               }}
-              placeholder="Paste Ticket ID..."
-              className="w-full px-3 py-2 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 font-mono"
+              placeholder="e.g. DOM001 or Ticket ID..."
+              className="w-full px-3 py-2 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 font-mono uppercase"
             />
             {lookupError && (
               <p className="text-[11px] text-red-600 font-medium">{lookupError}</p>

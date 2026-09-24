@@ -57,6 +57,21 @@ function getStatusBadge(status: TicketStatus | string) {
   }
 }
 
+const KNOWN_SERVICE_METADATA: Record<string, { hindi: string; category: string }> = {
+  DOM: { hindi: 'स्थानीय निवासी प्रमाण पत्र', category: 'Revenue / Tehsil Services' },
+  INC: { hindi: 'आय प्रमाण पत्र', category: 'Revenue / Tehsil Services' },
+  CAST: { hindi: 'जाति प्रमाण पत्र', category: 'Revenue / Tehsil Services' },
+  EWS: { hindi: 'EWS आय एवं संपत्ति प्रमाण पत्र', category: 'Revenue / Tehsil Services' },
+  LAND: { hindi: 'भू-अभिलेख', category: 'Revenue / Land Records' },
+  REV: { hindi: 'भू-अभिलेख एवं राजस्व', category: 'Revenue / Land Records' },
+  BTH: { hindi: 'जन्म प्रमाण पत्र', category: 'Municipal / Local Body Services' },
+  DTH: { hindi: 'मृत्यु प्रमाण पत्र', category: 'Municipal / Local Body Services' },
+  SAM: { hindi: 'समग्र ID / ई-KYC', category: 'Citizen Services' },
+  AAD: { hindi: 'आधार नामांकन / अपडेट', category: 'Aadhaar / Citizen Services' },
+  ADH: { hindi: 'आधार सेवा केंद्र', category: 'Aadhaar / Citizen Services' },
+  ELEC: { hindi: 'बिजली बिल / उपयोगिता भुगतान', category: 'Utility Services' },
+};
+
 export function TicketLiveCard({
   ticket,
   positionData,
@@ -66,6 +81,7 @@ export function TicketLiveCard({
   const isWaiting = ticket.status === TicketStatus.WAITING;
   const isCalled = ticket.status === TicketStatus.CALLED;
   const isServing = ticket.status === TicketStatus.SERVING;
+  const hindiTitle = ticket.service?.code ? KNOWN_SERVICE_METADATA[ticket.service.code]?.hindi : undefined;
 
   const formattedIssuedTime = ticket.issuedAt
     ? new Date(ticket.issuedAt).toLocaleTimeString([], {
@@ -85,10 +101,13 @@ export function TicketLiveCard({
           <span>Issued: {formattedIssuedTime}</span>
         </div>
 
-        <p className="text-xs text-blue-100 font-medium">{ticket.service?.name || 'Center Service'}</p>
+        <p className="text-sm text-blue-100 font-bold">{ticket.service?.name || 'Center Service'}</p>
+        {hindiTitle && (
+          <p className="text-xs text-blue-200/90 font-medium mt-0.5">{hindiTitle}</p>
+        )}
 
         {/* Token Hero */}
-        <div className="py-3">
+        <div className="py-2.5">
           <span className="text-5xl sm:text-7xl font-black font-mono tracking-wider text-white drop-shadow-sm">
             {ticket.ticketNumber}
           </span>

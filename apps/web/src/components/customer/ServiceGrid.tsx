@@ -27,7 +27,9 @@ export function ServiceGrid({
   onRetry,
 }: ServiceGridProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [waitingCounts, setWaitingCounts] = useState<Record<string, number>>({});
+  const [telemetryMap, setTelemetryMap] = useState<
+    Record<string, { waitingCount: number; estimatedWaitSeconds?: number | null }>
+  >({});
 
   // Centralized Socket.IO queue subscription for all active services
   useEffect(() => {
@@ -37,9 +39,12 @@ export function ServiceGrid({
 
     const handleQueueUpdate = (payload: QueueUpdatedPayload) => {
       if (payload?.serviceId) {
-        setWaitingCounts((prev) => ({
+        setTelemetryMap((prev) => ({
           ...prev,
-          [payload.serviceId]: payload.waitingCount,
+          [payload.serviceId]: {
+            waitingCount: payload.waitingCount,
+            estimatedWaitSeconds: payload.estimatedWaitSeconds,
+          },
         }));
       }
     };
@@ -154,7 +159,8 @@ export function ServiceGrid({
             <ServiceCard
               key={service.id}
               service={service}
-              waitingCount={waitingCounts[service.id]}
+              waitingCount={telemetryMap[service.id]?.waitingCount}
+              estimatedWaitSeconds={telemetryMap[service.id]?.estimatedWaitSeconds}
               isIssuing={issuingServiceId === service.id}
               onIssueTicket={onIssueTicket}
             />
