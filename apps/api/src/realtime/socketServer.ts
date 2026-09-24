@@ -139,6 +139,29 @@ export function initSocketServer(httpServer: HttpServer): Server {
         }
       }
     );
+
+    // Services Catalog Subscription
+    socket.on(
+      REALTIME_TOPICS.SERVICES_SUBSCRIBE,
+      (_data: unknown, callback?: (ack: SubscriptionAck) => void) => {
+        const room = 'services';
+        socket.join(room);
+        if (callback) {
+          callback({ success: true, room });
+        }
+      }
+    );
+
+    socket.on(
+      REALTIME_TOPICS.SERVICES_UNSUBSCRIBE,
+      (_data: unknown, callback?: (ack: SubscriptionAck) => void) => {
+        const room = 'services';
+        socket.leave(room);
+        if (callback) {
+          callback({ success: true, room });
+        }
+      }
+    );
   });
 
   // Wire up EventBus listeners to broadcast to respective rooms
@@ -156,6 +179,10 @@ export function initSocketServer(httpServer: HttpServer): Server {
 
   eventBus.on(REALTIME_EVENTS.PREDICTION_UPDATED, (payload) => {
     io.to('prediction').emit(REALTIME_EVENTS.PREDICTION_UPDATED, payload);
+  });
+
+  eventBus.on(REALTIME_EVENTS.SERVICE_UPDATED, (payload) => {
+    io.to('services').emit(REALTIME_EVENTS.SERVICE_UPDATED, payload);
   });
 
   return io;

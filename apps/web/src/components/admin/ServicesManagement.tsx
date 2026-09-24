@@ -274,7 +274,7 @@ export function ServicesManagement() {
                     required
                     value={formData.code}
                     onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                    placeholder="e.g. ADH"
+                    placeholder="e.g. DOM"
                     className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 font-mono"
                   />
                 </div>
@@ -285,7 +285,7 @@ export function ServicesManagement() {
                     required
                     value={formData.prefix}
                     onChange={(e) => setFormData({ ...formData, prefix: e.target.value.toUpperCase() })}
-                    placeholder="e.g. A"
+                    placeholder="e.g. DOM"
                     className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 font-mono"
                   />
                 </div>
@@ -298,18 +298,18 @@ export function ServicesManagement() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g. Aadhaar Services"
+                  placeholder="e.g. Domicile / Local Resident Certificate"
                   className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-gray-700 font-medium mb-1">Description</label>
+                <label className="block text-gray-700 font-medium mb-1">Description & Scope</label>
                 <textarea
                   rows={2}
                   value={formData.description || ''}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Service requirements or details"
+                  placeholder="e.g. State domicile & resident certificate issuance (स्थानीय निवासी प्रमाण पत्र) • Revenue / Tehsil Services"
                   className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
                 />
               </div>

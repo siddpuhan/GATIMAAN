@@ -8,14 +8,34 @@ import {
   DemandLevel,
   QueueUpdatedPayload,
   TicketUpdatedPayload,
+  ServiceUpdatedPayload,
   CounterSessionDTO,
 } from '@gatimaan/shared';
-import { useQueueSubscription, useTicketSubscription } from '../../hooks/useRealtime.js';
+import {
+  useQueueSubscription,
+  useTicketSubscription,
+  useServicesSubscription,
+} from '../../hooks/useRealtime.js';
 import { WaitTimeDisplay } from '../customer/WaitTimeDisplay.js';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const STORAGE_COUNTER_KEY = 'gatimaan_admin_desk_counter_id';
 const STORAGE_TICKET_KEY = 'gatimaan_admin_desk_active_ticket_id';
+
+const KNOWN_SERVICE_METADATA: Record<string, { hindi: string; category: string }> = {
+  DOM: { hindi: 'स्थानीय निवासी प्रमाण पत्र', category: 'Revenue / Tehsil Services' },
+  INC: { hindi: 'आय प्रमाण पत्र', category: 'Revenue / Tehsil Services' },
+  CAST: { hindi: 'जाति प्रमाण पत्र', category: 'Revenue / Tehsil Services' },
+  EWS: { hindi: 'EWS आय एवं संपत्ति प्रमाण पत्र', category: 'Revenue / Tehsil Services' },
+  LAND: { hindi: 'भू-अभिलेख', category: 'Revenue / Land Records' },
+  REV: { hindi: 'भू-अभिलेख एवं राजस्व', category: 'Revenue / Land Records' },
+  BTH: { hindi: 'जन्म प्रमाण पत्र', category: 'Municipal / Local Body Services' },
+  DTH: { hindi: 'मृत्यु प्रमाण पत्र', category: 'Municipal / Local Body Services' },
+  SAM: { hindi: 'समग्र ID / ई-KYC', category: 'Citizen Services' },
+  AAD: { hindi: 'आधार नामांकन / अपडेट', category: 'Aadhaar / Citizen Services' },
+  ADH: { hindi: 'आधार सेवा केंद्र', category: 'Aadhaar / Citizen Services' },
+  ELEC: { hindi: 'बिजली बिल / उपयोगिता भुगतान', category: 'Utility Services' },
+};
 
 export function QueueDesk() {
   const { getToken } = useAuth();
@@ -165,7 +185,35 @@ export function QueueDesk() {
 
   useTicketSubscription(activeTicket?.id, handleTicketUpdated);
 
-  // 5. Serving duration live timer
+  // 5. Realtime Services Catalog Updates
+  const handleServiceUpdated = useCallback((payload: ServiceUpdatedPayload) => {
+    setServices((prev) => {
+      const exists = prev.some((s) => s.id === payload.service.id);
+      if (payload.service.isActive) {
+        if (exists) {
+          return prev.map((s) => (s.id === payload.service.id ? payload.service : s));
+        } else {
+          return [...prev, payload.service];
+        }
+      } else {
+        return prev.filter((s) => s.id !== payload.service.id);
+      }
+    });
+  }, []);
+
+  useServicesSubscription(handleServiceUpdated);
+
+  // Auto-dismiss notification toasts after 4 seconds
+  useEffect(() => {
+    if (!error && !successMsg) return;
+    const timer = setTimeout(() => {
+      setError(null);
+      setSuccessMsg(null);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [error, successMsg]);
+
+  // 6. Serving duration live timer
   useEffect(() => {
     if (!activeTicket || activeTicket.status !== TicketStatus.SERVING || !activeTicket.servedAt) {
       setServingDuration('00:00');
@@ -445,41 +493,51 @@ export function QueueDesk() {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner Alert Messages */}
-      {error && (
-        <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-center justify-between gap-3">
-          <span>{error}</span>
-          <button
-            type="button"
-            onClick={() => setError(null)}
-            className="text-red-600 font-bold hover:text-red-900"
-          >
-            ✕
-          </button>
-        </div>
-      )}
+      {/* Floating Notification Toast (Zero Layout Shift) */}
+      <div className="fixed top-6 right-6 z-50 flex flex-col gap-2.5 max-w-sm pointer-events-none">
+        {error && (
+          <div className="pointer-events-auto p-3.5 bg-white border border-red-200 border-l-4 border-l-red-600 rounded-xl text-xs text-gray-900 shadow-xl flex items-start justify-between gap-3">
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-600 font-bold shrink-0">
+              !
+            </span>
+            <div className="flex-1 font-medium leading-relaxed">{error}</div>
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              className="text-gray-400 hover:text-gray-700 font-bold ml-1 text-sm leading-none shrink-0"
+              aria-label="Close notification"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
-      {successMsg && (
-        <div className="p-3.5 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800 flex items-center justify-between gap-3">
-          <span>{successMsg}</span>
-          <button
-            type="button"
-            onClick={() => setSuccessMsg(null)}
-            className="text-green-600 font-bold hover:text-green-900"
-          >
-            ✕
-          </button>
-        </div>
-      )}
+        {successMsg && (
+          <div className="pointer-events-auto p-3.5 bg-white border border-emerald-200 border-l-4 border-l-emerald-600 rounded-xl text-xs text-gray-900 shadow-xl flex items-start justify-between gap-3">
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 font-bold shrink-0">
+              ✓
+            </span>
+            <div className="flex-1 font-medium leading-relaxed">{successMsg}</div>
+            <button
+              type="button"
+              onClick={() => setSuccessMsg(null)}
+              className="text-gray-400 hover:text-gray-700 font-bold ml-1 text-sm leading-none shrink-0"
+              aria-label="Close notification"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Desk & Service Selection Strip */}
-      <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         {/* Counter Selection */}
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 min-w-0 w-full">
           <label className="text-xs font-bold text-gray-700 block">
             Select Service Counter / Desk
           </label>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0 w-full">
             <select
               value={selectedCounterId || ''}
               onChange={(e) => {
@@ -490,7 +548,7 @@ export function QueueDesk() {
                 setSuccessMsg(null);
               }}
               disabled={isActionPending}
-              className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-xl bg-white font-medium focus:ring-2 focus:ring-blue-500"
+              className="flex-1 min-w-0 w-full h-9 px-3 py-1.5 text-xs border border-gray-300 rounded-xl bg-white font-medium text-gray-800 outline-none hover:border-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-colors disabled:opacity-50 disabled:bg-gray-100 disabled:cursor-not-allowed cursor-pointer truncate"
             >
               {counters.map((c) => {
                 const sessionStatus = c.currentSession?.isActive
@@ -511,7 +569,7 @@ export function QueueDesk() {
                   type="button"
                   onClick={handleCloseDesk}
                   disabled={isActionPending}
-                  className="px-3 py-2 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs font-semibold hover:bg-red-100 transition whitespace-nowrap disabled:opacity-50"
+                  className="shrink-0 h-9 px-3.5 inline-flex items-center justify-center bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs font-semibold hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500/20 transition whitespace-nowrap disabled:opacity-50 cursor-pointer"
                 >
                   {isActionPending && actionType === 'closeDesk' ? 'Closing...' : 'Close Shift'}
                 </button>
@@ -520,7 +578,7 @@ export function QueueDesk() {
                   type="button"
                   onClick={handleOpenDesk}
                   disabled={isActionPending || !selectedCounter.isActive}
-                  className="px-3 py-2 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition whitespace-nowrap disabled:opacity-50"
+                  className="shrink-0 h-9 px-3.5 inline-flex items-center justify-center bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition whitespace-nowrap disabled:opacity-50 cursor-pointer"
                 >
                   {isActionPending && actionType === 'openDesk' ? 'Opening...' : 'Open Shift'}
                 </button>
@@ -535,7 +593,7 @@ export function QueueDesk() {
         </div>
 
         {/* Service Queue Filter */}
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 min-w-0 w-full">
           <label className="text-xs font-bold text-gray-700 block">
             Target Service Queue Filter
           </label>
@@ -546,7 +604,7 @@ export function QueueDesk() {
               setError(null);
             }}
             disabled={isActionPending}
-            className="w-full px-3 py-2 text-xs border border-gray-300 rounded-xl bg-white font-medium focus:ring-2 focus:ring-blue-500"
+            className="w-full min-w-0 h-9 px-3 py-1.5 text-xs border border-gray-300 rounded-xl bg-white font-medium text-gray-800 outline-none hover:border-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-colors disabled:opacity-50 disabled:bg-gray-100 disabled:cursor-not-allowed cursor-pointer truncate"
           >
             <option value="">All Services (Global FIFO & Priority)</option>
             {services.map((s) => (
@@ -628,6 +686,16 @@ export function QueueDesk() {
                   <p className="text-sm font-semibold text-blue-100">
                     {activeTicket.service?.name || 'Citizen Service'}
                   </p>
+                  {activeTicket.service?.code && KNOWN_SERVICE_METADATA[activeTicket.service.code]?.hindi && (
+                    <p className="text-xs text-blue-200/80 font-medium">
+                      {KNOWN_SERVICE_METADATA[activeTicket.service.code]?.hindi}
+                    </p>
+                  )}
+                  {selectedCounter && (
+                    <p className="text-[11px] text-blue-300/90 pt-0.5">
+                      Assigned to Counter #{selectedCounter.counterNumber} — {selectedCounter.name}
+                    </p>
+                  )}
                 </div>
 
                 {/* Metadata & Timer Bar */}

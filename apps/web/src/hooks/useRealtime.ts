@@ -6,6 +6,7 @@ import {
   QueueUpdatedPayload,
   FootfallUpdatedPayload,
   PredictionUpdatedPayload,
+  ServiceUpdatedPayload,
 } from '@gatimaan/shared';
 import { getSocket } from '../lib/socket.js';
 
@@ -69,6 +70,26 @@ export function useQueueSubscription(
       socket.emit(REALTIME_TOPICS.QUEUE_UNSUBSCRIBE, { serviceId });
     };
   }, [serviceId, onUpdate]);
+}
+
+/**
+ * Subscribes to global service catalog updates (create, update, activate, deactivate).
+ */
+export function useServicesSubscription(
+  onUpdate: (payload: ServiceUpdatedPayload) => void
+): void {
+  useEffect(() => {
+    const socket = getSocket();
+
+    socket.emit(REALTIME_TOPICS.SERVICES_SUBSCRIBE);
+
+    socket.on(REALTIME_EVENTS.SERVICE_UPDATED, onUpdate);
+
+    return () => {
+      socket.off(REALTIME_EVENTS.SERVICE_UPDATED, onUpdate);
+      socket.emit(REALTIME_TOPICS.SERVICES_UNSUBSCRIBE);
+    };
+  }, [onUpdate]);
 }
 
 /**

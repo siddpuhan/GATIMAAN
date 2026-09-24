@@ -377,7 +377,7 @@ export function CountersManagement() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g. Counter 1 (General Assistance)"
+                  placeholder="e.g. Citizen Help Desk / Certificate Services"
                   className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
                 />
               </div>

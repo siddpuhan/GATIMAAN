@@ -1,6 +1,7 @@
-import { CreateServiceInput, UpdateServiceInput, ServiceDTO } from '@gatimaan/shared';
+import { CreateServiceInput, UpdateServiceInput, ServiceDTO, REALTIME_EVENTS } from '@gatimaan/shared';
 import { prisma } from '../db/client.js';
 import { NotFoundError, ConflictError } from '../errors/appErrors.js';
+import { eventBus } from '../events/eventBus.js';
 
 export class ServicesService {
   async listServices(includeInactive = true): Promise<ServiceDTO[]> {
@@ -68,7 +69,7 @@ export class ServicesService {
       },
     });
 
-    return {
+    const dto: ServiceDTO = {
       id: service.id,
       code: service.code,
       name: service.name,
@@ -80,6 +81,14 @@ export class ServicesService {
       createdAt: service.createdAt,
       updatedAt: service.updatedAt,
     };
+
+    eventBus.emit(REALTIME_EVENTS.SERVICE_UPDATED, {
+      service: dto,
+      action: 'CREATED',
+      timestamp: new Date().toISOString(),
+    });
+
+    return dto;
   }
 
   async updateService(id: string, data: UpdateServiceInput): Promise<ServiceDTO> {
@@ -107,7 +116,7 @@ export class ServicesService {
       },
     });
 
-    return {
+    const dto: ServiceDTO = {
       id: updated.id,
       code: updated.code,
       name: updated.name,
@@ -119,6 +128,14 @@ export class ServicesService {
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
     };
+
+    eventBus.emit(REALTIME_EVENTS.SERVICE_UPDATED, {
+      service: dto,
+      action: 'UPDATED',
+      timestamp: new Date().toISOString(),
+    });
+
+    return dto;
   }
 
   async setServiceStatus(id: string, isActive: boolean): Promise<ServiceDTO> {
@@ -129,7 +146,7 @@ export class ServicesService {
       data: { isActive },
     });
 
-    return {
+    const dto: ServiceDTO = {
       id: updated.id,
       code: updated.code,
       name: updated.name,
@@ -141,6 +158,14 @@ export class ServicesService {
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
     };
+
+    eventBus.emit(REALTIME_EVENTS.SERVICE_UPDATED, {
+      service: dto,
+      action: 'STATUS_CHANGED',
+      timestamp: new Date().toISOString(),
+    });
+
+    return dto;
   }
 }
 

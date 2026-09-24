@@ -5,6 +5,7 @@ import {
   QueueUpdatedPayload,
   FootfallUpdatedPayload,
   PredictionUpdatedPayload,
+  ServiceUpdatedPayload,
 } from '@gatimaan/shared';
 
 export interface AppEventMap {
@@ -12,6 +13,7 @@ export interface AppEventMap {
   [REALTIME_EVENTS.QUEUE_UPDATED]: QueueUpdatedPayload;
   [REALTIME_EVENTS.FOOTFALL_UPDATED]: FootfallUpdatedPayload;
   [REALTIME_EVENTS.PREDICTION_UPDATED]: PredictionUpdatedPayload;
+  [REALTIME_EVENTS.SERVICE_UPDATED]: ServiceUpdatedPayload;
 }
 
 export class AppEventBus extends EventEmitter {

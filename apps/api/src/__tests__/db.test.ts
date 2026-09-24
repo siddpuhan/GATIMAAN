@@ -11,9 +11,9 @@ describe('Database & Prisma 7 Connectivity', () => {
 
     assert.ok(services.length >= 3);
     const codes = services.map((s) => s.code);
-    assert.ok(codes.includes('ADH'));
     assert.ok(codes.includes('DOM'));
-    assert.ok(codes.includes('REV'));
+    assert.ok(codes.includes('LAND') || codes.includes('REV'));
+    assert.ok(codes.includes('AAD') || codes.includes('ADH'));
   });
 
   it('should query seeded counters', async () => {

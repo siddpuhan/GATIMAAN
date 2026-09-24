@@ -11,11 +11,13 @@ import {
   QueueUpdatedPayload,
   FootfallUpdatedPayload,
   PredictionUpdatedPayload,
+  ServiceUpdatedPayload,
   SubscriptionAck,
   DemandLevel,
   FootfallEventType,
 } from '@gatimaan/shared';
 import { ticketsRouter } from '../routes/tickets.js';
+import { servicesRouter } from '../routes/services.js';
 import { errorHandler } from '../middleware/errorHandler.js';
 import { initSocketServer, closeSocketServer } from '../realtime/socketServer.js';
 import { eventBus } from '../events/eventBus.js';
@@ -64,6 +66,7 @@ describe('Realtime & Socket.IO Integration Tests', () => {
       next();
     });
     app.use('/', ticketsRouter);
+    app.use('/', servicesRouter);
     app.use(errorHandler);
     return app;
   }
@@ -427,4 +430,52 @@ describe('Realtime & Socket.IO Integration Tests', () => {
       ticketClient.disconnect();
     }
   });
+
+  it('broadcasts service.updated event to subscribers in services room when service status changes', async () => {
+    const servicesClient = await createClientSocket();
+
+    try {
+      // 1. Subscribe to services catalog
+      const subAckPromise = new Promise<SubscriptionAck>((resolve) => {
+        servicesClient.emit(REALTIME_TOPICS.SERVICES_SUBSCRIBE, {}, (ack: SubscriptionAck) => {
+          resolve(ack);
+        });
+      });
+      const ack = await subAckPromise;
+      assert.strictEqual(ack.success, true);
+      assert.strictEqual(ack.room, 'services');
+
+      // 2. Set up listener for service.updated
+      const serviceUpdatedPromise = new Promise<ServiceUpdatedPayload>((resolve) => {
+        servicesClient.on(REALTIME_EVENTS.SERVICE_UPDATED, (payload: ServiceUpdatedPayload) => {
+          resolve(payload);
+        });
+      });
+
+      // 3. Admin deactivates the service via API
+      const res = await request(server)
+        .patch(`/api/services/${serviceId}/status`)
+        .set('x-test-role', 'ADMIN')
+        .send({ isActive: false })
+        .expect(200);
+
+      assert.strictEqual(res.body.isActive, false);
+
+      // 4. Verify the client received the service.updated broadcast immediately
+      const received = await serviceUpdatedPromise;
+      assert.strictEqual(received.service.id, serviceId);
+      assert.strictEqual(received.service.isActive, false);
+      assert.strictEqual(received.action, 'STATUS_CHANGED');
+
+      // 5. Restore service to active for clean state
+      await request(server)
+        .patch(`/api/services/${serviceId}/status`)
+        .set('x-test-role', 'ADMIN')
+        .send({ isActive: true })
+        .expect(200);
+    } finally {
+      servicesClient.disconnect();
+    }
+  });
 });
+

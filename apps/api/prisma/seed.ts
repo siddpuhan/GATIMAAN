@@ -11,33 +11,96 @@ function hashKey(secret: string): string {
 async function main() {
   console.log('[Seed] Starting idempotent database seed...');
 
-  // 1. Seed Services
+  // 1. Seed Services (10 Realistic Indian / MP Citizen Service Categories)
   const servicesData = [
     {
-      code: 'ADH',
-      name: 'Aadhaar Card Services',
-      description: 'Aadhaar enrollment, biometric update, address update',
-      prefix: 'A',
+      code: 'DOM',
+      name: 'Domicile / Local Resident Certificate',
+      description: 'State domicile & resident certificate issuance (स्थानीय निवासी प्रमाण पत्र) • Revenue / Tehsil Services',
+      prefix: 'DOM',
       avgDurationMinutes: 15,
       priority: 1,
       isActive: true,
     },
     {
-      code: 'DOM',
-      name: 'Domicile & Income Certificate',
-      description: 'State domicile, caste and income certificate issuance',
-      prefix: 'D',
+      code: 'INC',
+      name: 'Income Certificate',
+      description: 'State income certificate verification & issuance (आय प्रमाण पत्र) • Revenue / Tehsil Services',
+      prefix: 'INC',
+      avgDurationMinutes: 15,
+      priority: 1,
+      isActive: true,
+    },
+    {
+      code: 'CAST',
+      name: 'Caste Certificate',
+      description: 'SC / ST / OBC caste certificate issuance & verification (जाति प्रमाण पत्र) • Revenue / Tehsil Services',
+      prefix: 'CAST',
+      avgDurationMinutes: 15,
+      priority: 1,
+      isActive: true,
+    },
+    {
+      code: 'EWS',
+      name: 'EWS Income & Asset Certificate',
+      description: 'Economically Weaker Section certificate (EWS आय एवं संपत्ति प्रमाण पत्र) • Revenue / Tehsil Services',
+      prefix: 'EWS',
       avgDurationMinutes: 20,
       priority: 1,
       isActive: true,
     },
     {
-      code: 'REV',
-      name: 'Revenue & Land Records',
-      description: 'Khasra, B-1 copy, land mutation, property tax services',
-      prefix: 'R',
-      avgDurationMinutes: 25,
+      code: 'LAND',
+      name: 'Land Records — Khasra / B-1 / Naksha',
+      description: 'Certified Khasra, B-1 copy and map search (भू-अभिलेख) • Revenue / Land Records',
+      prefix: 'LAND',
+      avgDurationMinutes: 20,
       priority: 2,
+      isActive: true,
+    },
+    {
+      code: 'BTH',
+      name: 'Birth Certificate Services',
+      description: 'Digital birth registration & certificate issuance (जन्म प्रमाण पत्र) • Municipal / Local Body Services',
+      prefix: 'BTH',
+      avgDurationMinutes: 15,
+      priority: 2,
+      isActive: true,
+    },
+    {
+      code: 'DTH',
+      name: 'Death Certificate Services',
+      description: 'Digital death registration & certificate issuance (मृत्यु प्रमाण पत्र) • Municipal / Local Body Services',
+      prefix: 'DTH',
+      avgDurationMinutes: 15,
+      priority: 2,
+      isActive: true,
+    },
+    {
+      code: 'SAM',
+      name: 'Samagra ID / e-KYC Assistance',
+      description: 'Samagra family ID update, member addition & e-KYC (समग्र ID / ई-KYC) • Citizen Services',
+      prefix: 'SAM',
+      avgDurationMinutes: 15,
+      priority: 1,
+      isActive: true,
+    },
+    {
+      code: 'AAD',
+      name: 'Aadhaar Enrollment / Update Assistance',
+      description: 'Biometric update, mobile linking & demographic correction (आधार नामांकन / अपडेट) • Aadhaar / Citizen Services',
+      prefix: 'AAD',
+      avgDurationMinutes: 15,
+      priority: 1,
+      isActive: true,
+    },
+    {
+      code: 'ELEC',
+      name: 'Electricity Bill / Utility Payment',
+      description: 'MPPKVVCL / DISCOM electricity bill payment (बिजली बिल / उपयोगिता भुगतान) • Utility Services',
+      prefix: 'ELEC',
+      avgDurationMinutes: 10,
+      priority: 3,
       isActive: true,
     },
   ];
@@ -58,13 +121,28 @@ async function main() {
     });
     seededServices.push(service);
   }
+
+  // Deactivate any legacy/demo services outside the canonical 10
+  const canonicalCodes = servicesData.map((s) => s.code);
+  await prisma.service.updateMany({
+    where: {
+      code: { notIn: canonicalCodes },
+    },
+    data: {
+      isActive: false,
+    },
+  });
+
   console.log(`[Seed] Seeded ${seededServices.length} canonical services.`);
 
-  // 2. Seed Counters
+  // 2. Seed Counters (6 Realistic Service-Center Desks)
   const countersData = [
-    { counterNumber: 1, name: 'Counter 1 (General)', isActive: true },
-    { counterNumber: 2, name: 'Counter 2 (Certificates)', isActive: true },
-    { counterNumber: 3, name: 'Counter 3 (Revenue & Land)', isActive: true },
+    { counterNumber: 1, name: 'Citizen Help Desk', isActive: true },
+    { counterNumber: 2, name: 'Certificate Services', isActive: true },
+    { counterNumber: 3, name: 'Revenue & Land Records', isActive: true },
+    { counterNumber: 4, name: 'Citizen Registration', isActive: true },
+    { counterNumber: 5, name: 'Aadhaar Services', isActive: true },
+    { counterNumber: 6, name: 'Payments & Utility Services', isActive: true },
   ];
 
   const seededCounters = [];
@@ -162,11 +240,11 @@ async function main() {
   console.log(`[Seed] Seeded ${footfallEventsData.length} bootstrap footfall events.`);
 
   // 5. Seed Synthetic Prediction Snapshot
-  const adhService = seededServices.find((s) => s.code === 'ADH');
-  if (adhService) {
+  const aadService = seededServices.find((s) => s.code === 'AAD');
+  if (aadService) {
     const existingSnapshot = await prisma.predictionSnapshot.findFirst({
       where: {
-        serviceId: adhService.id,
+        serviceId: aadService.id,
         recommendation: 'Seed baseline bootstrap',
       },
     });
@@ -174,7 +252,7 @@ async function main() {
     if (!existingSnapshot) {
       await prisma.predictionSnapshot.create({
         data: {
-          serviceId: adhService.id,
+          serviceId: aadService.id,
           timestamp: new Date(),
           predictedWaitSeconds: 900,
           predictedFootfall: 15,
