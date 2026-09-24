@@ -10,7 +10,7 @@ import {
   requireRole,
   syncUserRecord,
 } from '../middleware/auth.js';
-import { prisma } from '../db/client.js';
+import { prisma, disconnectDb } from '../db/client.js';
 
 describe('Auth & RBAC Middleware Unit Tests', () => {
   it('should extract UserRole.ADMIN when publicMetadata role is ADMIN', () => {
@@ -107,6 +107,7 @@ describe('Database User Synchronization Integration Tests', () => {
     await prisma.user.deleteMany({
       where: { clerkUserId: testClerkId },
     });
+    await disconnectDb();
   });
 
   it('should lazily synchronize a new customer into PostgreSQL', async () => {

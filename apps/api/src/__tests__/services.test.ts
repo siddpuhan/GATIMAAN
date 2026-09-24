@@ -5,7 +5,7 @@ import request from 'supertest';
 import { createApp } from '../app.js';
 import { servicesRouter } from '../routes/services.js';
 import { errorHandler } from '../middleware/errorHandler.js';
-import { prisma } from '../db/client.js';
+import { prisma, disconnectDb } from '../db/client.js';
 
 function createAdminApp() {
   const app = express();
@@ -56,6 +56,7 @@ describe('Services API Integration Tests', () => {
     await prisma.user.deleteMany({
       where: { clerkUserId: { in: ['test_admin_services', 'test_cust_services'] } },
     });
+    await disconnectDb();
   });
 
   it('should allow unauthenticated public request to GET /api/services and return active services', async () => {

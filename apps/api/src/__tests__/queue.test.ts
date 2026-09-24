@@ -5,7 +5,7 @@ import request from 'supertest';
 import { createApp } from '../app.js';
 import { ticketsRouter } from '../routes/tickets.js';
 import { errorHandler } from '../middleware/errorHandler.js';
-import { prisma } from '../db/client.js';
+import { prisma, disconnectDb } from '../db/client.js';
 
 describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
   const randomSuffix = Math.floor(Math.random() * 9000) + 1000;
@@ -166,6 +166,8 @@ describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
     await prisma.user.deleteMany({
       where: { clerkUserId: { in: [adminClerkId1, adminClerkId2, custClerkId] } },
     });
+
+    await disconnectDb();
   });
 
   describe('Ticket Issuance (POST /api/tickets/issue)', () => {
