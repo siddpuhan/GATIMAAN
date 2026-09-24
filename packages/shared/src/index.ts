@@ -275,6 +275,8 @@ export interface QueueUpdatedPayload {
   serviceId: string;
   waitingCount: number;
   activeCountersCount: number;
+  estimatedWaitSeconds?: number | null;
+  demandLevel?: DemandLevel;
   timestamp: string;
 }
 
