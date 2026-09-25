@@ -1,13 +1,20 @@
 import React from 'react';
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  variant?: 'default' | 'flat' | 'focal';
   children: React.ReactNode;
 }
 
-export function Card({ className = '', children, ...props }: CardProps) {
+export function Card({ variant = 'default', className = '', children, ...props }: CardProps) {
+  const variantStyles = {
+    default: 'bg-white rounded-2xl border border-slate-200/80 shadow-2xs',
+    flat: 'bg-slate-50 rounded-2xl border border-slate-200/60 shadow-none',
+    focal: 'bg-slate-900 text-white rounded-3xl border border-slate-800 shadow-sm',
+  };
+
   return (
     <div
-      className={`bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden ${className}`}
+      className={`${variantStyles[variant]} overflow-hidden ${className}`}
       {...props}
     >
       {children}
@@ -48,7 +55,7 @@ export function CardDescription({
   ...props
 }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={`text-xs text-slate-500 mt-1 leading-relaxed ${className}`} {...props}>
+    <p className={`text-xs text-slate-500 mt-0.5 leading-relaxed ${className}`} {...props}>
       {children}
     </p>
   );

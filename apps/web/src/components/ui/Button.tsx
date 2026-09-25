@@ -3,6 +3,7 @@ import React from 'react';
 export type ButtonVariant =
   | 'primary'
   | 'secondary'
+  | 'outline'
   | 'success'
   | 'warning'
   | 'destructive'
@@ -25,6 +26,8 @@ const variantStyles: Record<ButtonVariant, string> = {
   primary:
     'bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white border border-slate-900 shadow-xs focus-visible:ring-slate-900',
   secondary:
+    'bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-800 border border-slate-300 shadow-2xs focus-visible:ring-slate-500',
+  outline:
     'bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-800 border border-slate-300 shadow-2xs focus-visible:ring-slate-500',
   success:
     'bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white border border-emerald-700 shadow-xs focus-visible:ring-emerald-700',

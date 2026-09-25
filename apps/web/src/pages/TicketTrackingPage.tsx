@@ -162,13 +162,13 @@ export function TicketTrackingPage() {
       {/* Top Breadcrumb & Live Socket Status */}
       <div className="flex items-center justify-between text-xs text-slate-500">
         <Link
-          to="/"
+          to="/services"
           className="inline-flex items-center gap-1.5 font-semibold text-slate-700 hover:text-slate-900 transition"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
-          <span>All Services</span>
+          <span>Services Catalogue</span>
         </Link>
 
         <Badge variant="success" size="sm" dot pulse>

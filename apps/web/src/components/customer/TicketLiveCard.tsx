@@ -49,14 +49,14 @@ export function TicketLiveCard({
     : '--:--';
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden max-w-xl mx-auto transition-all">
-      {/* Top Government Pass Brand Strip */}
+    <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden max-w-xl mx-auto transition-all">
+      {/* Tier 3 Focal Header: Dominant Token Hero Strip */}
       <div className="bg-slate-900 text-white p-5 sm:p-6 text-center border-b border-slate-800">
         <div className="flex items-center justify-between text-xs text-slate-300 mb-2">
           <span className="font-bold tracking-wider uppercase text-[10px] text-slate-400">
-            MP Online Digital Token
+            MP Online Digital Token Pass
           </span>
-          <span className="text-[11px]">Issued at {formattedIssuedTime}</span>
+          <span className="text-[11px] text-slate-400">Issued at {formattedIssuedTime}</span>
         </div>
 
         <p className="text-sm text-slate-200 font-semibold">{ticket.service?.name || 'Center Service'}</p>
@@ -65,12 +65,12 @@ export function TicketLiveCard({
         )}
 
         {/* Big Dominant Token Number Display */}
-        <div className="py-4 my-2 bg-slate-800/80 rounded-2xl border border-slate-700 max-w-md mx-auto">
+        <div className="py-4 my-2 bg-slate-800/80 rounded-2xl border border-slate-700/80 max-w-md mx-auto">
           <span className="text-5xl sm:text-7xl font-black font-mono tracking-widest text-white block">
             {ticket.ticketNumber}
           </span>
           <span className="text-[11px] text-slate-400 font-mono mt-1 block uppercase">
-            Service Prefix: {ticket.service?.prefix || '-'}
+            Prefix: {ticket.service?.prefix || '-'}
           </span>
         </div>
 
@@ -83,12 +83,12 @@ export function TicketLiveCard({
           )}
           {isCalled && (
             <Badge variant="warning" size="md" dot pulse className="bg-amber-500 text-white border-amber-400 font-bold">
-              SUMMONED TO COUNTER #{ticket.counter?.counterNumber || ''}
+              SUMMONED TO DESK #{ticket.counter?.counterNumber || ''}
             </Badge>
           )}
           {isServing && (
             <Badge variant="success" size="md" dot pulse className="bg-emerald-600 text-white border-emerald-500 font-bold">
-              Currently at Desk #{ticket.counter?.counterNumber || ''}
+              Currently Serving at Desk #{ticket.counter?.counterNumber || ''}
             </Badge>
           )}
           {isCompleted && (
@@ -109,12 +109,12 @@ export function TicketLiveCard({
         </div>
       </div>
 
-      {/* Main Body */}
+      {/* Main Body: Subordinate Information Tier */}
       <div className="p-5 sm:p-6 space-y-6">
         {/* Progress Timeline */}
         <QueueProgressTimeline status={ticket.status} />
 
-        {/* Counter Summoning Alert */}
+        {/* Counter Summoning Alert Callout */}
         {(isCalled || isServing) && (
           <CounterCallout
             counterNumber={ticket.counter?.counterNumber}
@@ -123,8 +123,8 @@ export function TicketLiveCard({
           />
         )}
 
-        {/* Stat Trio: Position, Estimated Wait, Assigned Counter */}
-        <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5 bg-slate-50 p-3.5 sm:p-4 rounded-2xl border border-slate-200">
+        {/* Subordinate Stat Trio: Position, Estimated Wait, Assigned Counter */}
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5 bg-slate-50 p-3.5 sm:p-4 rounded-2xl border border-slate-200/80">
           {/* Stat 1: Queue Position */}
           <div className="text-center p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
             <span className="text-[10px] font-bold text-slate-500 block uppercase tracking-wider">
@@ -161,7 +161,7 @@ export function TicketLiveCard({
           {/* Stat 3: Assigned Counter */}
           <div className="text-center p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
             <span className="text-[10px] font-bold text-slate-500 block uppercase tracking-wider">
-              Counter
+              Desk
             </span>
             <span className="text-xl sm:text-2xl font-black font-mono text-slate-900 block mt-0.5">
               {ticket.counter?.counterNumber ? `#${ticket.counter.counterNumber}` : 'Auto'}

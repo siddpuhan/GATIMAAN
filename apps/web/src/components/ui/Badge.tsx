@@ -14,10 +14,10 @@ interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 
 const variantClasses: Record<BadgeVariant, string> = {
   navy: 'bg-slate-100 text-slate-800 border-slate-300 font-semibold',
-  success: 'bg-emerald-50 text-emerald-800 border-emerald-300 font-semibold',
+  success: 'bg-emerald-50 text-emerald-800 border-emerald-200 font-semibold',
   warning: 'bg-amber-50 text-amber-900 border-amber-300 font-semibold',
-  destructive: 'bg-rose-50 text-rose-800 border-rose-300 font-semibold',
-  neutral: 'bg-gray-100 text-gray-700 border-gray-300 font-medium',
+  destructive: 'bg-rose-50 text-rose-800 border-rose-200 font-semibold',
+  neutral: 'bg-slate-100 text-slate-600 border-slate-200 font-medium',
 };
 
 const dotClasses: Record<BadgeVariant, string> = {
@@ -25,7 +25,7 @@ const dotClasses: Record<BadgeVariant, string> = {
   success: 'bg-emerald-600',
   warning: 'bg-amber-600',
   destructive: 'bg-rose-600',
-  neutral: 'bg-gray-500',
+  neutral: 'bg-slate-400',
 };
 
 const sizeClasses: Record<BadgeSize, string> = {

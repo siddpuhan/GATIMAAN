@@ -3,18 +3,21 @@ import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { SignedIn, SignedOut, UserButton, useUser } from '@clerk/clerk-react';
 import { UserRole } from '@gatimaan/shared';
 import { ProtectedRoute } from './components/auth/ProtectedRoute.js';
-import { CustomerPortalPage } from './pages/CustomerPortalPage.js';
+import { LandingPage } from './pages/LandingPage.js';
+import { CitizenServicesPage } from './pages/CitizenServicesPage.js';
+import { CitizenDashboardPage } from './pages/CitizenDashboardPage.js';
+import { PublicTrackPage } from './pages/PublicTrackPage.js';
 import { TicketTrackingPage } from './pages/TicketTrackingPage.js';
 import { SignInPage } from './pages/SignInPage.js';
 import { SignUpPage } from './pages/SignUpPage.js';
 import { AdminShellPage } from './pages/AdminShellPage.js';
-import { AdminQueuePage } from './pages/AdminQueuePage.js';
 import { getActiveTicketId } from './lib/ticketStorage.js';
 
 export function App() {
   const { user } = useUser();
   const location = useLocation();
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Accessibility Controls: Font Scale and High Contrast Mode
   const [fontScale, setFontScale] = useState<'sm' | 'md' | 'lg'>('md');
@@ -26,6 +29,7 @@ export function App() {
 
   useEffect(() => {
     setActiveTicketId(getActiveTicketId());
+    setMobileMenuOpen(false);
   }, [location]);
 
   const isAdminRoute = location.pathname.startsWith('/admin');
@@ -51,10 +55,10 @@ export function App() {
       <div className="bg-slate-900 text-slate-100 text-xs py-2 px-4 sm:px-6 border-b border-slate-800">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div className="flex items-center gap-3">
-            {/* Emblem Slot Placeholder (Reserved for State Seal) */}
+            {/* State Emblem Slot */}
             <div
               className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-300 shrink-0"
-              title="State Emblem of Madhya Pradesh / मध्य प्रदेश शासन मुहर (Reserved Slot)"
+              title="State Emblem of Madhya Pradesh / मध्य प्रदेश शासन मुहर"
               aria-label="State Emblem of Madhya Pradesh Slot"
             >
               <span className="font-serif">🏛️</span>
@@ -69,7 +73,7 @@ export function App() {
             </div>
           </div>
 
-          {/* Accessibility Controls & Language Toggle */}
+          {/* Accessibility Controls & Language */}
           <div className="flex items-center gap-3 self-end sm:self-auto text-slate-300 text-[11px]">
             {/* Font Size Scaling */}
             <div
@@ -131,7 +135,7 @@ export function App() {
         </div>
       </div>
 
-      {/* Thin 2.5px Tricolor Accent Line */}
+      {/* Tricolor Accent Line */}
       <div
         className="h-[2.5px] w-full bg-gradient-to-r from-amber-600 via-slate-200 to-emerald-700 shrink-0"
         aria-hidden="true"
@@ -140,7 +144,28 @@ export function App() {
       {/* 3. Official GATIMAAN App Navigation Header */}
       <header className="bg-white border-b border-slate-200 py-3 px-4 sm:px-6 shadow-2xs sticky top-0 z-40">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-6 sm:gap-8">
+          <div className="flex items-center gap-4 sm:gap-8">
+            {/* Mobile Hamburger Toggle for Citizen Nav */}
+            {!isAdminRoute && (
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="md:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200"
+                aria-label="Toggle mobile navigation menu"
+                aria-expanded={mobileMenuOpen}
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth="2"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            )}
+
             {/* Logo */}
             <Link
               to="/"
@@ -159,17 +184,42 @@ export function App() {
               </div>
             </Link>
 
-            {/* Navigation: Context-aware citizen links */}
-            <nav className="hidden sm:flex items-center gap-5 text-xs font-semibold text-slate-600">
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center gap-5 text-xs font-semibold text-slate-600">
               <Link
                 to="/"
                 className={`transition hover:text-slate-900 ${
-                  location.pathname === '/' || location.pathname === '/services'
-                    ? 'text-slate-900 font-bold'
-                    : ''
+                  location.pathname === '/' ? 'text-slate-900 font-bold' : ''
                 }`}
               >
-                Services Catalog
+                Home
+              </Link>
+
+              <Link
+                to="/services"
+                className={`transition hover:text-slate-900 ${
+                  location.pathname === '/services' ? 'text-slate-900 font-bold' : ''
+                }`}
+              >
+                Services
+              </Link>
+
+              <Link
+                to="/track"
+                className={`transition hover:text-slate-900 ${
+                  location.pathname === '/track' ? 'text-slate-900 font-bold' : ''
+                }`}
+              >
+                Track Token
+              </Link>
+
+              <Link
+                to="/dashboard"
+                className={`transition hover:text-slate-900 ${
+                  location.pathname === '/dashboard' ? 'text-slate-900 font-bold' : ''
+                }`}
+              >
+                Dashboard
               </Link>
 
               {activeTicketId && (
@@ -215,30 +265,110 @@ export function App() {
             </SignedOut>
           </div>
         </div>
+
+        {/* Mobile Dropdown Menu for Citizen Navigation */}
+        {!isAdminRoute && mobileMenuOpen && (
+          <div className="md:hidden pt-3 pb-2 px-2 mt-3 border-t border-slate-100 space-y-1 text-xs font-semibold animate-fade-in">
+            <Link
+              to="/"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`block px-3 py-2 rounded-xl transition ${
+                location.pathname === '/' ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              Home
+            </Link>
+
+            <Link
+              to="/services"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`block px-3 py-2 rounded-xl transition ${
+                location.pathname === '/services' ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              Services Catalogue
+            </Link>
+
+            <Link
+              to="/track"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`block px-3 py-2 rounded-xl transition ${
+                location.pathname === '/track' ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              Track Token
+            </Link>
+
+            <Link
+              to="/dashboard"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`block px-3 py-2 rounded-xl transition ${
+                location.pathname === '/dashboard' ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              Citizen Dashboard
+            </Link>
+
+            {activeTicketId && (
+              <Link
+                to={`/ticket/${activeTicketId}`}
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2 rounded-xl bg-slate-900 text-white font-bold transition"
+              >
+                ● View My Active Token
+              </Link>
+            )}
+
+            {currentRole === UserRole.ADMIN && (
+              <SignedIn>
+                <Link
+                  to="/admin"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 rounded-xl bg-slate-100 text-slate-900 font-bold border border-slate-200 transition"
+                >
+                  Admin Control Portal →
+                </Link>
+              </SignedIn>
+            )}
+          </div>
+        )}
       </header>
 
       {/* 4. Main Landmark Content Area */}
-      <main id="main-content" tabIndex={-1} className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:py-8 focus:outline-none">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className={`flex-1 w-full mx-auto p-4 sm:p-6 lg:py-8 focus:outline-none ${
+          isAdminRoute ? 'max-w-7xl' : 'max-w-6xl'
+        }`}
+      >
         <Routes>
-          <Route path="/" element={<CustomerPortalPage />} />
-          <Route path="/services" element={<CustomerPortalPage />} />
+          {/* Public Landing Page */}
+          <Route path="/" element={<LandingPage />} />
+
+          {/* Citizen Service Catalogue */}
+          <Route path="/services" element={<CitizenServicesPage />} />
+
+          {/* Citizen Active-Token Dashboard */}
+          <Route path="/dashboard" element={<CitizenDashboardPage />} />
+
+          {/* Public Token Tracking Search */}
+          <Route path="/track" element={<PublicTrackPage />} />
+
+          {/* Specific Ticket Live-Status Pages */}
           <Route path="/ticket/:id" element={<TicketTrackingPage />} />
           <Route path="/tickets/:id" element={<TicketTrackingPage />} />
+
+          {/* Clerk Auth Pages */}
           <Route path="/sign-in/*" element={<SignInPage />} />
           <Route path="/sign-up/*" element={<SignUpPage />} />
+
+          {/* Admin / Operator Portal Shell with persistent sidebar & nested routes */}
           <Route
-            path="/admin"
+            path="/admin/*"
             element={
               <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
                 <AdminShellPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/queue"
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
-                <AdminQueuePage />
               </ProtectedRoute>
             }
           />

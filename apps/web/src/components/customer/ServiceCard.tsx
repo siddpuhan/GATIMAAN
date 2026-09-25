@@ -36,51 +36,43 @@ export function ServiceCard({
 }: ServiceCardProps) {
   const meta = KNOWN_SERVICE_METADATA[service.code];
   const hindiTitle = meta?.hindi;
-  const categoryLabel = meta?.category;
   const isQueueOpen = service.isActive;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-slate-400 hover:shadow-sm transition-all duration-200 flex flex-col justify-between group">
+    <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs hover:border-slate-400 hover:shadow-xs transition-all duration-200 flex flex-col justify-between group">
       <div>
-        {/* Header with Prefix Badge & Queue Status */}
+        {/* Header: Prefix Identifier & Queue Availability */}
         <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2">
-            <Badge variant="navy" size="sm">
-              <span className="font-mono font-bold">Prefix: {service.prefix}</span>
-            </Badge>
-            {categoryLabel && (
-              <span className="text-[10px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                {categoryLabel}
-              </span>
-            )}
-          </div>
+          <Badge variant="navy" size="sm">
+            <span className="font-mono font-bold">Prefix: {service.prefix}</span>
+          </Badge>
 
           {isQueueOpen ? (
             <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-              Queue open
+              Queue Open
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
               <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-              Queue closed
+              Queue Closed
             </span>
           )}
         </div>
 
-        {/* Title */}
-        <h3 className="text-base font-bold text-slate-900 group-hover:text-slate-800 transition-colors">
+        {/* Primary English Title */}
+        <h3 className="text-base font-bold text-slate-900 group-hover:text-slate-800 transition-colors leading-snug">
           {service.name}
         </h3>
 
-        {/* Hindi Subtitle */}
+        {/* Subtle Hindi Subtitle */}
         {hindiTitle && (
           <p className="text-xs text-slate-500 font-medium mt-0.5 tracking-wide">
             {hindiTitle}
           </p>
         )}
 
-        {/* Description */}
+        {/* Description: Clean text wrapping without awkward truncation */}
         <p className="text-xs text-slate-600 mt-2 leading-relaxed min-h-[36px]">
           {service.description || 'Public government service desk for token issuance.'}
         </p>
