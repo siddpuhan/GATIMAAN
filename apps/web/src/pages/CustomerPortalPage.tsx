@@ -5,6 +5,9 @@ import { ServiceDTO, TicketDTO, ServiceUpdatedPayload } from '@gatimaan/shared';
 import { ServiceGrid } from '../components/customer/ServiceGrid.js';
 import { ActiveTicketBanner } from '../components/customer/ActiveTicketBanner.js';
 import { useServicesSubscription } from '../hooks/useRealtime.js';
+import { AlertBanner } from '../components/ui/FeedbackStates.js';
+import { Button } from '../components/ui/Button.js';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card.js';
 import {
   getActiveTicketId,
   setActiveTicketId,
@@ -37,7 +40,7 @@ export function CustomerPortalPage() {
       setServicesError(null);
       const res = await fetch(`${API_BASE}/api/services`);
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         throw new Error(data.message || 'Unable to retrieve available services');
       }
       const data: ServiceDTO[] = await res.json();
@@ -131,8 +134,8 @@ export function CustomerPortalPage() {
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || 'Failed to issue ticket. Please try again.');
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to issue token. Please try again.');
       }
 
       const createdTicket: TicketDTO = await res.json();
@@ -156,14 +159,14 @@ export function CustomerPortalPage() {
     e.preventDefault();
     const cleanId = lookupId.trim();
     if (!cleanId) {
-      setLookupError('Please enter a valid ticket ID');
+      setLookupError('Please enter a valid Token ID or Token Number');
       return;
     }
     navigate(`/ticket/${cleanId}`);
   };
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto py-2">
+    <div className="space-y-8 max-w-5xl mx-auto">
       {/* Active Ticket Banner (if user already has a live pass) */}
       {!isCheckingActiveTicket && activeTicket && (
         <ActiveTicketBanner
@@ -172,62 +175,66 @@ export function CustomerPortalPage() {
         />
       )}
 
-      {/* Hero Welcome Banner */}
-      <section className="bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white rounded-3xl p-6 sm:p-10 shadow-sm relative overflow-hidden">
-        {/* Subtle decorative background pattern */}
-        <div className="absolute -right-16 -bottom-16 w-64 h-64 rounded-full bg-white/5 pointer-events-none" />
-        <div className="absolute right-32 -top-12 w-48 h-48 rounded-full bg-blue-500/10 pointer-events-none" />
-
-        <div className="relative z-10 max-w-2xl space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-blue-200 text-xs font-semibold backdrop-blur-xs border border-white/10">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-            MP Online Smart Queue Management
+      {/* Calm, Trustworthy Government Explainer & 3-Step Journey */}
+      <section className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-800 space-y-6">
+        <div className="max-w-3xl space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 text-slate-200 text-xs font-semibold border border-slate-700">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            MP Online Citizen Facilitation
           </div>
 
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
-            Skip the physical line. Track your queue live.
+          <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-white">
+            Digital Queue Token & Live Counter Dispatch
           </h1>
 
-          <p className="text-xs sm:text-sm text-blue-100 leading-relaxed">
-            Generate an instant digital token for government citizen services. Receive live position
-            updates, estimated wait times, and direct desk notifications on your mobile device.
+          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            Generate an instant queue token for government citizen services, monitor your live waiting
+            position in real-time, and proceed directly to your assigned service desk when summoned.
           </p>
+        </div>
 
-          <div className="pt-2 flex flex-wrap items-center gap-3 text-xs text-blue-200">
-            <span className="flex items-center gap-1.5">
-              <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-              Instant Digital Pass
+        {/* 3-Step Journey */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-800 text-xs">
+          <div className="flex items-start gap-3 p-3.5 bg-slate-800/80 rounded-xl border border-slate-700/80">
+            <span className="w-6 h-6 rounded-lg bg-slate-700 text-white font-bold flex items-center justify-center shrink-0 text-xs">
+              1
             </span>
-            <span className="flex items-center gap-1.5">
-              <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-              Real-time Position Tracking
+            <div>
+              <strong className="text-slate-100 block text-xs">Choose Service</strong>
+              <span className="text-slate-400 text-[11px]">Select your department service below</span>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 p-3.5 bg-slate-800/80 rounded-xl border border-slate-700/80">
+            <span className="w-6 h-6 rounded-lg bg-slate-700 text-white font-bold flex items-center justify-center shrink-0 text-xs">
+              2
             </span>
-            <span className="flex items-center gap-1.5">
-              <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-              No App Install Required
+            <div>
+              <strong className="text-slate-100 block text-xs">Get Digital Token</strong>
+              <span className="text-slate-400 text-[11px]">Instant pass with wait estimate</span>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 p-3.5 bg-slate-800/80 rounded-xl border border-slate-700/80">
+            <span className="w-6 h-6 rounded-lg bg-slate-700 text-white font-bold flex items-center justify-center shrink-0 text-xs">
+              3
             </span>
+            <div>
+              <strong className="text-slate-100 block text-xs">Track & Get Called</strong>
+              <span className="text-slate-400 text-[11px]">Live alert when desk is ready</span>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Ticket Issuance Error Alert */}
       {issueError && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-xs text-red-800 flex items-center justify-between gap-3">
-          <span>{issueError}</span>
-          <button
-            type="button"
-            onClick={() => setIssueError(null)}
-            className="text-red-600 font-bold hover:text-red-900"
-          >
-            ✕
-          </button>
-        </div>
+        <AlertBanner
+          type="error"
+          title="Token Issuance Failed"
+          message={issueError}
+          onClose={() => setIssueError(null)}
+        />
       )}
 
       {/* Services Catalog Grid */}
@@ -242,64 +249,80 @@ export function CustomerPortalPage() {
         />
       </section>
 
-      {/* Quick Lookup & How It Works Strip */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-        {/* Ticket Lookup Box */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-3">
-          <h3 className="text-sm font-bold text-gray-900">Already Have a Token?</h3>
-          <p className="text-xs text-gray-500">
-            Enter your Token Number (e.g. DOM001) or Ticket ID to track your live queue position.
-          </p>
-          <form onSubmit={handleLookupSubmit} className="space-y-2">
-            <input
-              type="text"
-              value={lookupId}
-              onChange={(e) => {
-                setLookupId(e.target.value);
-                setLookupError(null);
-              }}
-              placeholder="e.g. DOM001 or Ticket ID..."
-              className="w-full px-3 py-2 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 font-mono uppercase"
-            />
-            {lookupError && (
-              <p className="text-[11px] text-red-600 font-medium">{lookupError}</p>
-            )}
-            <button
-              type="submit"
-              className="w-full py-2 bg-gray-900 text-white rounded-xl text-xs font-semibold hover:bg-black transition"
-            >
-              Track Token →
-            </button>
-          </form>
-        </div>
+      {/* Quick Lookup & Citizen Information Strip */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+        {/* Token Lookup Box */}
+        <Card className="md:col-span-1">
+          <CardHeader>
+            <CardTitle>Track Existing Token</CardTitle>
+            <CardDescription>
+              Enter your Token Number (e.g. DOM001) or Token ID to view live waiting status
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLookupSubmit} className="space-y-3">
+              <div>
+                <input
+                  type="text"
+                  value={lookupId}
+                  onChange={(e) => {
+                    setLookupId(e.target.value);
+                    setLookupError(null);
+                  }}
+                  placeholder="e.g. DOM001 or Token ID..."
+                  className="w-full px-3.5 py-2.5 text-xs border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 font-mono uppercase"
+                />
+                {lookupError && (
+                  <p className="text-[11px] text-rose-600 font-medium mt-1">{lookupError}</p>
+                )}
+              </div>
+              <Button type="submit" variant="primary" size="md" fullWidth>
+                <span>Track Token</span>
+                <span>→</span>
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-        {/* How It Works Card 1 */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-2 flex flex-col justify-between">
-          <div>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 font-bold flex items-center justify-center text-sm mb-3">
-              1
+        {/* Citizen Facilitation Information */}
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle>Citizen Guidelines & Information</CardTitle>
+            <CardDescription>
+              Important requirements for citizen facilitation at MP Online centers
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-xs text-slate-600">
+            <div className="flex items-start gap-2.5">
+              <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                •
+              </span>
+              <p>
+                <strong>Keep Documents Ready:</strong> Please have your original Aadhaar card,
+                supporting identity proofs, and application reference numbers available before your
+                token is called.
+              </p>
             </div>
-            <h4 className="text-sm font-bold text-gray-900">Choose Service & Token</h4>
-            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-              Select your required MP Online service above. Your digital ticket number is generated instantly.
-            </p>
-          </div>
-          <span className="text-[11px] font-semibold text-blue-600">Pure Digital Queue</span>
-        </div>
-
-        {/* How It Works Card 2 */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-2 flex flex-col justify-between">
-          <div>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 font-bold flex items-center justify-center text-sm mb-3">
-              2
+            <div className="flex items-start gap-2.5">
+              <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                •
+              </span>
+              <p>
+                <strong>Desk Summoning:</strong> When your token is called, your pass will display the
+                assigned counter number. Please proceed promptly to the designated desk.
+              </p>
             </div>
-            <h4 className="text-sm font-bold text-gray-900">Live Call to Counter</h4>
-            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-              Relax in the lounge. When your number is called, your pass flashes your assigned counter number.
-            </p>
-          </div>
-          <span className="text-[11px] font-semibold text-emerald-600">Realtime Notifications</span>
-        </div>
+            <div className="flex items-start gap-2.5">
+              <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                •
+              </span>
+              <p>
+                <strong>Need Assistance?</strong> Visit the center reception desk or contact the toll-free
+                citizen helpline at <strong>1800-233-0194</strong>.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </section>
     </div>
   );

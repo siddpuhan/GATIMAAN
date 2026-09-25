@@ -1,20 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@clerk/clerk-react';
 import { ServiceDTO, CreateServiceInput } from '@gatimaan/shared';
+import { Badge } from '../ui/Badge.js';
+import { Button } from '../ui/Button.js';
+import {
+  AlertBanner,
+  LoadingState,
+  EmptyState,
+} from '../ui/FeedbackStates.js';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 export function ServicesManagement() {
   const { getToken } = useAuth();
+
   const [services, setServices] = useState<ServiceDTO[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [actionPendingId, setActionPendingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [editingService, setEditingService] = useState<ServiceDTO | null>(null);
+  const [editingService, setEditingService] =
+    useState<ServiceDTO | null>(null);
 
-  // Form state
   const [formData, setFormData] = useState<CreateServiceInput>({
     code: '',
     name: '',
@@ -25,36 +35,45 @@ export function ServicesManagement() {
     isActive: true,
   });
 
-  const fetchServices = async () => {
+  const fetchServices = useCallback(async () => {
     try {
       setError(null);
-      const token = await getToken();
-      const res = await fetch(`${API_BASE}/api/services`, {
-        headers: {
-          Authorization: token ? `Bearer ${token}` : '',
-        },
-      });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || 'Failed to fetch services');
+      const token = await getToken();
+
+      const headers: Record<string, string> = {};
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const data = await res.json();
+      const res = await fetch(`${API_BASE}/api/services`, { headers });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(
+          data.message || 'Failed to fetch services catalog'
+        );
+      }
+
+      const data: ServiceDTO[] = await res.json();
       setServices(data);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error fetching services');
+      setError(
+        err instanceof Error ? err.message : 'Error fetching services'
+      );
     } finally {
       setInitialLoading(false);
     }
-  };
+  }, [getToken]);
 
   useEffect(() => {
     fetchServices();
-  }, []);
+  }, [fetchServices]);
 
   const handleOpenCreate = () => {
     setEditingService(null);
+
     setFormData({
       code: '',
       name: '',
@@ -64,11 +83,13 @@ export function ServicesManagement() {
       priority: 1,
       isActive: true,
     });
+
     setShowModal(true);
   };
 
   const handleOpenEdit = (service: ServiceDTO) => {
     setEditingService(service);
+
     setFormData({
       code: service.code,
       name: service.name,
@@ -78,47 +99,68 @@ export function ServicesManagement() {
       priority: service.priority,
       isActive: service.isActive,
     });
+
     setShowModal(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     try {
       setIsSaving(true);
       setError(null);
+
       const token = await getToken();
+
       const url = editingService
         ? `${API_BASE}/api/services/${editingService.id}`
         : `${API_BASE}/api/services`;
+
       const method = editingService ? 'PATCH' : 'POST';
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
 
       const res = await fetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: token ? `Bearer ${token}` : '',
-        },
+        headers,
         body: JSON.stringify(formData),
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || 'Failed to save service');
+        const data = await res.json().catch(() => ({}));
+
+        throw new Error(
+          data.message || 'Failed to save service'
+        );
       }
 
       const savedService: ServiceDTO = await res.json();
-      
-      // Update local state directly without triggering a full re-fetch roundtrip
+
       setServices((prev) => {
         if (editingService) {
-          return prev.map((s) => (s.id === savedService.id ? savedService : s));
+          return prev.map((s) =>
+            s.id === savedService.id ? savedService : s
+          );
         }
-        return [...prev, savedService].sort((a, b) => a.priority - b.priority || a.code.localeCompare(b.code));
+
+        return [...prev, savedService].sort(
+          (a, b) =>
+            a.priority - b.priority ||
+            a.code.localeCompare(b.code)
+        );
       });
 
       setShowModal(false);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error saving service');
+      setError(
+        err instanceof Error ? err.message : 'Error saving service'
+      );
     } finally {
       setIsSaving(false);
     }
@@ -128,128 +170,241 @@ export function ServicesManagement() {
     try {
       setActionPendingId(service.id);
       setError(null);
+
       const token = await getToken();
-      const res = await fetch(`${API_BASE}/api/services/${service.id}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: token ? `Bearer ${token}` : '',
-        },
-        body: JSON.stringify({ isActive: !service.isActive }),
-      });
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const res = await fetch(
+        `${API_BASE}/api/services/${service.id}/status`,
+        {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({
+            isActive: !service.isActive,
+          }),
+        }
+      );
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || 'Failed to toggle status');
+        const data = await res.json().catch(() => ({}));
+
+        throw new Error(
+          data.message || 'Failed to toggle status'
+        );
       }
 
       const updatedService: ServiceDTO = await res.json();
 
-      // Update in-place immediately
       setServices((prev) =>
-        prev.map((s) => (s.id === updatedService.id ? updatedService : s))
+        prev.map((s) =>
+          s.id === updatedService.id ? updatedService : s
+        )
       );
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error toggling status');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Error toggling service status'
+      );
     } finally {
       setActionPendingId(null);
     }
   };
 
+  const filteredServices = services.filter((s) => {
+    const q = searchQuery.toLowerCase().trim();
+
+    if (!q) return true;
+
+    return (
+      s.name.toLowerCase().includes(q) ||
+      s.code.toLowerCase().includes(q) ||
+      s.prefix.toLowerCase().includes(q) ||
+      (s.description &&
+        s.description.toLowerCase().includes(q))
+    );
+  });
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-800">Services Catalog</h3>
-          <p className="text-xs text-gray-500">Configure center services, token prefixes, and duration weights</p>
+          <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+            Services Catalog
+          </h2>
+
+          <p className="text-xs text-slate-500">
+            Configure citizen department services, token prefix
+            codes, and average duration weights
+          </p>
         </div>
-        <button
-          onClick={handleOpenCreate}
-          className="px-3.5 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition shadow-xs"
-        >
-          + Add Service
-        </button>
+
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search catalog..."
+            className="px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-900 min-w-[200px]"
+          />
+
+          <Button
+            variant="primary"
+            size="md"
+            onClick={handleOpenCreate}
+            icon={<span>+</span>}
+          >
+            Add Service
+          </Button>
+        </div>
       </div>
 
+      {/* Error */}
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded text-xs text-red-700">
-          {error}
-        </div>
+        <AlertBanner
+          type="error"
+          title="Catalog Error"
+          message={error}
+          onClose={() => setError(null)}
+        />
       )}
 
+      {/* Services */}
       {initialLoading ? (
-        <div className="text-center py-8 text-xs text-gray-500 flex items-center justify-center gap-2">
-          <span className="w-3 h-3 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
-          Loading services...
-        </div>
-      ) : services.length === 0 ? (
-        <div className="text-center py-8 bg-gray-50 rounded border border-gray-200 text-xs text-gray-500">
-          No services configured yet. Click &quot;+ Add Service&quot; to create one.
-        </div>
+        <LoadingState message="Loading services catalog..." />
+      ) : filteredServices.length === 0 ? (
+        <EmptyState
+          title="No services found"
+          message={
+            searchQuery
+              ? `No services matching "${searchQuery}".`
+              : 'No services configured yet. Click "Add Service" to create one.'
+          }
+          action={
+            searchQuery
+              ? {
+                label: 'Clear Filter',
+                onClick: () => setSearchQuery(''),
+              }
+              : {
+                label: 'Add First Service',
+                onClick: handleOpenCreate,
+              }
+          }
+        />
       ) : (
-        <div className="overflow-x-auto border border-gray-200 rounded-lg">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50 text-gray-600 uppercase border-b border-gray-200">
+        <div className="overflow-x-auto border border-slate-200 rounded-2xl bg-white shadow-xs">
+          <table className="w-full text-left text-xs text-slate-800">
+            <thead className="bg-slate-50 text-slate-600 uppercase text-[11px] font-bold border-b border-slate-200">
               <tr>
-                <th className="py-2.5 px-4 font-semibold">Code</th>
-                <th className="py-2.5 px-4 font-semibold">Name</th>
-                <th className="py-2.5 px-4 font-semibold">Prefix</th>
-                <th className="py-2.5 px-4 font-semibold">Avg Duration</th>
-                <th className="py-2.5 px-4 font-semibold">Priority</th>
-                <th className="py-2.5 px-4 font-semibold">Status</th>
-                <th className="py-2.5 px-4 font-semibold text-right">Actions</th>
+                <th className="py-3 px-4">Code</th>
+                <th className="py-3 px-4">Service Name</th>
+                <th className="py-3 px-4">Prefix</th>
+                <th className="py-3 px-4">Avg Duration</th>
+                <th className="py-3 px-4">Priority</th>
+                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4 text-right">
+                  Actions
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {services.map((s) => {
-                const isPending = actionPendingId === s.id;
+
+            <tbody className="divide-y divide-slate-100">
+              {filteredServices.map((s) => {
+                const isPending =
+                  actionPendingId === s.id;
+
                 return (
-                  <tr key={s.id} className="hover:bg-gray-50/75 transition">
-                    <td className="py-2.5 px-4 font-mono font-medium text-gray-900">{s.code}</td>
-                    <td className="py-2.5 px-4 text-gray-800 font-medium">
-                      {s.name}
+                  <tr
+                    key={s.id}
+                    className="hover:bg-slate-50/80 transition-colors"
+                  >
+                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
+                      {s.code}
+                    </td>
+
+                    <td className="py-3.5 px-4 font-semibold text-slate-900">
+                      <div>{s.name}</div>
+
                       {s.description && (
-                        <p className="text-[11px] text-gray-500 font-normal">{s.description}</p>
+                        <p className="text-[11px] text-slate-500 font-normal mt-0.5 max-w-sm">
+                          {s.description}
+                        </p>
                       )}
                     </td>
-                    <td className="py-2.5 px-4">
-                      <span className="px-2 py-0.5 bg-gray-100 rounded text-gray-700 font-mono font-bold">
-                        {s.prefix}
-                      </span>
+
+                    <td className="py-3.5 px-4">
+                      <Badge variant="navy" size="sm">
+                        <span className="font-mono font-bold">
+                          {s.prefix}
+                        </span>
+                      </Badge>
                     </td>
-                    <td className="py-2.5 px-4 text-gray-600">{s.avgDurationMinutes} mins</td>
-                    <td className="py-2.5 px-4 text-gray-600">{s.priority}</td>
-                    <td className="py-2.5 px-4">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                          s.isActive
-                            ? 'bg-green-100 text-green-800 border border-green-200'
-                            : 'bg-gray-100 text-gray-600 border border-gray-200'
-                        }`}
-                      >
-                        {s.isActive ? 'Active' : 'Inactive'}
-                      </span>
+
+                    <td className="py-3.5 px-4 text-slate-700 font-medium">
+                      {s.avgDurationMinutes} mins
                     </td>
-                    <td className="py-2.5 px-4 text-right space-x-2">
-                      <button
-                        onClick={() => handleOpenEdit(s)}
+
+                    <td className="py-3.5 px-4 text-slate-700 font-medium">
+                      Rank {s.priority}
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      {s.isActive ? (
+                        <Badge
+                          variant="success"
+                          size="sm"
+                          dot
+                        >
+                          Active
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="neutral"
+                          size="sm"
+                          dot
+                        >
+                          Inactive
+                        </Badge>
+                      )}
+                    </td>
+
+                    <td className="py-3.5 px-4 text-right space-x-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         disabled={isPending}
-                        className="text-blue-600 hover:text-blue-800 font-medium disabled:opacity-40"
+                        onClick={() => handleOpenEdit(s)}
                       >
                         Edit
-                      </button>
-                      <button
-                        onClick={() => handleToggleStatus(s)}
+                      </Button>
+
+                      <Button
+                        variant={
+                          s.isActive
+                            ? 'destructive-outline'
+                            : 'success'
+                        }
+                        size="sm"
                         disabled={isPending}
-                        className={`font-medium disabled:opacity-40 inline-flex items-center gap-1 ${
-                          s.isActive ? 'text-amber-600 hover:text-amber-800' : 'text-green-600 hover:text-green-800'
-                        }`}
+                        isLoading={isPending}
+                        onClick={() =>
+                          handleToggleStatus(s)
+                        }
                       >
-                        {isPending && (
-                          <span className="w-2.5 h-2.5 rounded-full border border-current border-t-transparent animate-spin" />
-                        )}
-                        {s.isActive ? 'Deactivate' : 'Activate'}
-                      </button>
+                        {s.isActive
+                          ? 'Deactivate'
+                          : 'Activate'}
+                      </Button>
                     </td>
                   </tr>
                 );
@@ -259,103 +414,184 @@ export function ServicesManagement() {
         </div>
       )}
 
+      {/* Add / Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 space-y-4">
-            <h4 className="text-base font-bold text-gray-900">
-              {editingService ? 'Edit Service' : 'Create New Service'}
-            </h4>
-            <form onSubmit={handleSubmit} className="space-y-3 text-xs">
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-2xs animate-fade-in"
+        >
+          <div className="bg-white rounded-3xl shadow-xl max-w-lg w-full p-6 sm:p-7 space-y-5 border border-slate-200">
+
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">
+                {editingService
+                  ? 'Edit Citizen Service'
+                  : 'Configure New Service'}
+              </h3>
+
+              <p className="text-xs text-slate-500 mt-0.5">
+                Set token numbering prefix, department code,
+                and average wait weights
+              </p>
+            </div>
+
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-4 text-xs"
+            >
+              {/* Code + Prefix */}
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-gray-700 font-medium mb-1">Service Code *</label>
+
+                <div className="space-y-1">
+                  <label className="block text-slate-700 font-bold">
+                    Service Code *
+                  </label>
+
                   <input
                     type="text"
                     required
                     value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                    placeholder="e.g. DOM"
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 font-mono"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        code: e.target.value.toUpperCase(),
+                      })
+                    }
+                    placeholder="e.g. ADH"
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 font-mono font-bold"
                   />
                 </div>
-                <div>
-                  <label className="block text-gray-700 font-medium mb-1">Ticket Prefix *</label>
+
+                <div className="space-y-1">
+                  <label className="block text-slate-700 font-bold">
+                    Token Prefix *
+                  </label>
+
                   <input
                     type="text"
                     required
                     value={formData.prefix}
-                    onChange={(e) => setFormData({ ...formData, prefix: e.target.value.toUpperCase() })}
-                    placeholder="e.g. DOM"
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 font-mono"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        prefix: e.target.value.toUpperCase(),
+                      })
+                    }
+                    placeholder="e.g. A"
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 font-mono font-bold"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-gray-700 font-medium mb-1">Service Name *</label>
+              {/* Name */}
+              <div className="space-y-1">
+                <label className="block text-slate-700 font-bold">
+                  Service Name *
+                </label>
+
                 <input
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g. Domicile / Local Resident Certificate"
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      name: e.target.value,
+                    })
+                  }
+                  placeholder="e.g. Aadhaar Card Biometric Update"
+                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 text-xs"
                 />
               </div>
 
-              <div>
-                <label className="block text-gray-700 font-medium mb-1">Description & Scope</label>
+              {/* Description */}
+              <div className="space-y-1">
+                <label className="block text-slate-700 font-bold">
+                  Description
+                </label>
+
                 <textarea
                   rows={2}
                   value={formData.description || ''}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="e.g. State domicile & resident certificate issuance (स्थानीय निवासी प्रमाण पत्र) • Revenue / Tehsil Services"
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      description: e.target.value,
+                    })
+                  }
+                  placeholder="Public citizen guidance and document requirements..."
+                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 text-xs"
                 />
               </div>
 
+              {/* Duration + Priority */}
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-gray-700 font-medium mb-1">Avg Duration (mins)</label>
+
+                <div className="space-y-1">
+                  <label className="block text-slate-700 font-bold">
+                    Avg Duration (mins)
+                  </label>
+
                   <input
                     type="number"
                     min={1}
                     value={formData.avgDurationMinutes}
-                    onChange={(e) => setFormData({ ...formData, avgDurationMinutes: parseInt(e.target.value, 10) || 15 })}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        avgDurationMinutes:
+                          parseInt(e.target.value, 10) || 15,
+                      })
+                    }
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 font-mono"
                   />
                 </div>
-                <div>
-                  <label className="block text-gray-700 font-medium mb-1">Priority Rank</label>
+
+                <div className="space-y-1">
+                  <label className="block text-slate-700 font-bold">
+                    Priority Rank
+                  </label>
+
                   <input
                     type="number"
                     min={1}
                     value={formData.priority}
-                    onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value, 10) || 1 })}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        priority:
+                          parseInt(e.target.value, 10) || 1,
+                      })
+                    }
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 font-mono"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
-                <button
+              {/* Buttons */}
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="md"
                   disabled={isSaving}
                   onClick={() => setShowModal(false)}
-                  className="px-3 py-1.5 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+
+                <Button
                   type="submit"
-                  disabled={isSaving}
-                  className="px-4 py-1.5 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition disabled:opacity-50 inline-flex items-center gap-1.5"
+                  variant="primary"
+                  size="md"
+                  isLoading={isSaving}
+                  loadingText="Saving..."
                 >
-                  {isSaving && (
-                    <span className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                  )}
-                  {editingService ? 'Save Changes' : 'Create Service'}
-                </button>
+                  {editingService
+                    ? 'Save Changes'
+                    : 'Create Service'}
+                </Button>
               </div>
             </form>
           </div>
@@ -364,4 +600,3 @@ export function ServicesManagement() {
     </div>
   );
 }
-

@@ -6,8 +6,8 @@ import {
   REALTIME_TOPICS,
 } from '@gatimaan/shared';
 import { ServiceCard } from './ServiceCard.js';
-import { ServiceGridSkeleton } from './LoadingSkeleton.js';
 import { getSocket } from '../../lib/socket.js';
+import { LoadingState, EmptyState, ErrorState } from '../ui/FeedbackStates.js';
 
 interface ServiceGridProps {
   services: ServiceDTO[];
@@ -74,32 +74,16 @@ export function ServiceGrid({
   });
 
   if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="h-6 bg-gray-200 rounded w-48 animate-pulse" />
-        </div>
-        <ServiceGridSkeleton />
-      </div>
-    );
+    return <LoadingState message="Loading available services..." />;
   }
 
   if (error) {
     return (
-      <div className="p-8 bg-red-50 border border-red-200 rounded-2xl text-center space-y-3 max-w-md mx-auto">
-        <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto text-lg font-bold">
-          !
-        </div>
-        <h4 className="text-sm font-bold text-red-900">Failed to Load Services</h4>
-        <p className="text-xs text-red-700">{error}</p>
-        <button
-          type="button"
-          onClick={onRetry}
-          className="px-4 py-2 bg-red-600 text-white rounded-xl text-xs font-semibold hover:bg-red-700 transition shadow-xs"
-        >
-          Try Again
-        </button>
-      </div>
+      <ErrorState
+        title="Unable to Load Services"
+        message="We couldn't load the available services. Please check your connection and try again."
+        onRetry={onRetry}
+      />
     );
   }
 
@@ -108,9 +92,9 @@ export function ServiceGrid({
       {/* Search Filter Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-gray-900">Available Government Services</h2>
-          <p className="text-xs text-gray-500">
-            Select a service to generate an instant digital queue ticket
+          <h2 className="text-lg font-bold text-slate-900 tracking-tight">Available Citizen Services</h2>
+          <p className="text-xs text-slate-500">
+            Select a service to generate an instant digital queue token
           </p>
         </div>
 
@@ -119,15 +103,16 @@ export function ServiceGrid({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search services (e.g. Aadhaar, Pan)..."
-            className="w-full pl-9 pr-3.5 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-2xs"
+            placeholder="Search services (e.g. Aadhaar, Domicile)..."
+            className="w-full pl-9 pr-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition shadow-2xs"
           />
           <svg
-            className="w-4 h-4 text-gray-400 absolute left-3 top-2.5"
+            className="w-4 h-4 text-slate-400 absolute left-3 top-3"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
             strokeWidth="2"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
@@ -139,7 +124,8 @@ export function ServiceGrid({
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 text-xs"
+              className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs p-1"
+              aria-label="Clear search"
             >
               ✕
             </button>
@@ -149,10 +135,22 @@ export function ServiceGrid({
 
       {/* Grid of Services */}
       {filteredServices.length === 0 ? (
-        <div className="p-8 bg-gray-50 border border-gray-200 rounded-2xl text-center text-xs text-gray-500 space-y-1">
-          <p className="font-semibold text-gray-700">No matching services found</p>
-          <p>Try searching for a different keyword or clear the search filter.</p>
-        </div>
+        <EmptyState
+          title="No matching services found"
+          message={
+            searchQuery
+              ? `No services matching "${searchQuery}". Try a different keyword.`
+              : 'No services are currently available.'
+          }
+          action={
+            searchQuery
+              ? {
+                  label: 'Clear Search',
+                  onClick: () => setSearchQuery(''),
+                }
+              : undefined
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredServices.map((service) => (

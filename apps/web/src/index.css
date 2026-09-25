@@ -1,1 +1,27 @@
 @import 'tailwindcss';
+
+/* High contrast and font scaling utility definitions */
+.text-scale-sm {
+  font-size: 0.9375rem;
+}
+
+.text-scale-md {
+  font-size: 1rem;
+}
+
+.text-scale-lg {
+  font-size: 1.0625rem;
+}
+
+.theme-high-contrast {
+  filter: contrast(110%);
+}
+
+.theme-high-contrast .bg-slate-50 {
+  background-color: #f1f5f9 !important;
+}
+
+.theme-high-contrast .border-slate-200,
+.theme-high-contrast .border-slate-300 {
+  border-color: #475569 !important;
+}

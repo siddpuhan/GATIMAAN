@@ -1,4 +1,5 @@
 import React from 'react';
+import { Badge } from '../ui/Badge.js';
 
 interface CounterCalloutProps {
   counterNumber: number | null | undefined;
@@ -20,43 +21,45 @@ export function CounterCallout({
   return (
     <div
       role="alert"
-      className={`rounded-xl p-4 border transition-all duration-300 ${
+      className={`rounded-2xl p-5 border transition-all duration-300 ${
         isCalled
-          ? 'bg-amber-500/10 border-amber-500 text-amber-950 ring-2 ring-amber-400/30'
-          : 'bg-emerald-500/10 border-emerald-500 text-emerald-950'
+          ? 'bg-amber-50 border-amber-300 text-amber-950 ring-2 ring-amber-400/40 shadow-xs'
+          : 'bg-emerald-50 border-emerald-300 text-emerald-950 shadow-xs'
       }`}
     >
-      <div className="flex items-start gap-3.5">
+      <div className="flex items-start gap-4">
         <div
-          className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-lg font-black ${
-            isCalled ? 'bg-amber-500 text-white shadow-xs animate-bounce' : 'bg-emerald-600 text-white shadow-xs'
+          className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-xl font-black font-mono ${
+            isCalled ? 'bg-amber-600 text-white shadow-xs' : 'bg-emerald-700 text-white shadow-xs'
           }`}
         >
           {counterNumber ? `#${counterNumber}` : '!'}
         </div>
 
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-center gap-2">
-            <span
-              className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
-                isCalled ? 'bg-amber-200 text-amber-900 font-mono' : 'bg-emerald-200 text-emerald-900 font-mono'
-              }`}
-            >
-              {isCalled ? 'Your Turn Now' : 'Currently Serving'}
-            </span>
+            {isCalled ? (
+              <Badge variant="warning" size="sm" dot pulse>
+                YOUR TURN NOW
+              </Badge>
+            ) : (
+              <Badge variant="success" size="sm" dot pulse>
+                CURRENTLY SERVING
+              </Badge>
+            )}
           </div>
 
-          <h3 className="text-base sm:text-lg font-bold mt-1 text-gray-900">
-            {counterNumber ? `Proceed to Desk #${counterNumber}` : 'Proceed to Counter'}
+          <h3 className="text-lg font-bold text-slate-900">
+            {counterNumber ? `Proceed to Desk #${counterNumber}` : 'Proceed to Assigned Desk'}
           </h3>
 
           {counterName && (
-            <p className="text-xs text-gray-600 mt-0.5">{counterName}</p>
+            <p className="text-xs text-slate-600">{counterName}</p>
           )}
 
           {isCalled && (
-            <p className="text-xs text-amber-800 font-medium mt-2 bg-amber-100/60 p-2 rounded-lg border border-amber-200/60">
-              Please present your digital pass or token number to the desk operator.
+            <p className="text-xs text-amber-900 font-medium pt-1">
+              Please walk over to Desk #{counterNumber || ''} and present your token number to the operator.
             </p>
           )}
         </div>
