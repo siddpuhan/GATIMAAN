@@ -252,7 +252,104 @@ All counter management endpoints require `ADMIN` role.
 
 ---
 
-## 5. Realtime & Socket.IO Subscriptions (Phase 7)
+## 5. IoT Footfall Ingestion Endpoints (Phase 11)
+
+All IoT hardware ingestion endpoints require device authentication via headers:
+- `x-device-id`: Unique alphanumeric device identifier (e.g., `GATE-01`)
+- `x-device-key`: Secret API key provisioned for the device
+
+### `POST /api/iot/footfall`
+- **Auth**: `requireDeviceAuth` (`x-device-id`, `x-device-key`)
+- **Description**: Ingests a single footfall event from an authorized gate controller or kiosk. Idempotent: duplicate `(deviceId, clientEventId)` submissions return `200 OK` with `isDuplicate: true` and avoid duplicate state mutations or broadcasts.
+- **Request Body**:
+```json
+{
+  "clientEventId": "evt-1727230000000-abcd",
+  "eventType": "IN", // "IN" | "OUT" | "SCAN"
+  "occurredAt": "2026-09-25T10:00:00.000Z", // optional, defaults to server now
+  "metadata": { "sensor": "optical_beam_a" } // optional JSON
+}
+```
+- **Response**: `201 Created` (or `200 OK` for duplicate)
+```json
+{
+  "success": true,
+  "eventId": "uuid",
+  "clientEventId": "evt-1727230000000-abcd",
+  "eventType": "IN",
+  "currentOccupancy": 42,
+  "isDuplicate": false,
+  "processedAt": "2026-09-25T10:00:00.100Z"
+}
+```
+- **Errors**: `401 Unauthorized` (Missing or invalid device credentials), `403 Forbidden` (Deactivated device), `400 Bad Request` (Validation error)
+
+### `POST /api/iot/footfall/batch`
+- **Auth**: `requireDeviceAuth` (`x-device-id`, `x-device-key`)
+- **Description**: Ingests a batch of offline-buffered footfall events from a reconnected IoT gate. Deduplicates existing records.
+- **Request Body**:
+```json
+{
+  "events": [
+    {
+      "clientEventId": "evt-1",
+      "eventType": "IN",
+      "occurredAt": "2026-09-25T09:50:00.000Z"
+    },
+    {
+      "clientEventId": "evt-2",
+      "eventType": "OUT",
+      "occurredAt": "2026-09-25T09:52:00.000Z"
+    }
+  ]
+}
+```
+- **Response**: `200 OK`
+```json
+{
+  "success": true,
+  "totalReceived": 2,
+  "inserted": 2,
+  "duplicates": 0,
+  "currentOccupancy": 41
+}
+```
+
+---
+
+## 6. Footfall Telemetry & Analytics Endpoints (Phase 11)
+
+All telemetry endpoints require `ADMIN` role.
+
+### `GET /api/footfall/current`
+- **Auth**: `requireAuth`, `requireRole(UserRole.ADMIN)`
+- **Description**: Returns live occupancy and today's footfall summary metrics.
+- **Response**: `200 OK`
+```json
+{
+  "currentOccupancy": 41,
+  "todayCountIn": 128,
+  "todayCountOut": 87,
+  "peakOccupancyToday": 65,
+  "lastEventAt": "2026-09-25T09:52:00.000Z"
+}
+```
+
+### `GET /api/footfall/snapshots`
+- **Auth**: `requireAuth`, `requireRole(UserRole.ADMIN)`
+- **Description**: Retrieves historical hourly footfall snapshots for analytics.
+- **Query Params**: `date` (optional, `YYYY-MM-DD`)
+- **Response**: `200 OK` — Array of `FootfallSnapshotDTO`
+
+### `POST /api/footfall/snapshots/generate`
+- **Auth**: `requireAuth`, `requireRole(UserRole.ADMIN)`
+- **Description**: Manually triggers creation/update of an hourly footfall snapshot.
+- **Request Body**: `{ "date": "2026-09-25T10:00:00.000Z" }` (optional)
+- **Response**: `201 Created` — `FootfallSnapshotDTO`
+
+---
+
+## 7. Realtime & Socket.IO Subscriptions (Phase 7 & Phase 11)
 
 Socket.IO server operates on the unified HTTP server (`ws://` / `http://` transport with polling fallback).
 
