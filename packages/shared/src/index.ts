@@ -318,4 +318,130 @@ export interface SubscriptionAck {
   message?: string;
 }
 
+// ---------------------------------------------------------------------------
+// IoT & Footfall Schemas & DTO Types (Phase 11)
+// ---------------------------------------------------------------------------
 
+export const IngestFootfallSchema = z.object({
+  clientEventId: z.string().min(1, 'Client event ID is required').max(100).trim(),
+  eventType: z.nativeEnum(FootfallEventType),
+  occurredAt: z.string().datetime().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional().nullable(),
+});
+
+export type IngestFootfallInput = z.infer<typeof IngestFootfallSchema>;
+
+export const BatchIngestFootfallSchema = z.object({
+  events: z.array(IngestFootfallSchema).min(1, 'At least one event is required').max(500),
+});
+
+export type BatchIngestFootfallInput = z.infer<typeof BatchIngestFootfallSchema>;
+
+export const GetFootfallQuerySchema = z.object({
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional(),
+});
+
+export type GetFootfallQueryInput = z.infer<typeof GetFootfallQuerySchema>;
+
+export interface DeviceDTO {
+  id: string;
+  deviceId: string;
+  deviceType: DeviceType;
+  name: string;
+  location: string | null;
+  isActive: boolean;
+  lastSeenAt: Date | string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface FootfallEventDTO {
+  id: string;
+  deviceId: string;
+  clientEventId: string;
+  eventType: FootfallEventType;
+  occurredAt: Date | string;
+  metadata: Record<string, unknown> | null;
+  createdAt: Date | string;
+}
+
+export interface FootfallSnapshotDTO {
+  id: string;
+  timestamp: Date | string;
+  hourOfDay: number;
+  dayOfWeek: number;
+  countIn: number;
+  countOut: number;
+  netOccupancy: number;
+  createdAt: Date | string;
+}
+
+export interface FootfallSummaryDTO {
+  currentOccupancy: number;
+  todayCountIn: number;
+  todayCountOut: number;
+  peakOccupancyToday: number;
+  lastEventAt: Date | string | null;
+}
+
+export interface IngestFootfallResponseDTO {
+  success: boolean;
+  eventId: string;
+  clientEventId: string;
+  eventType: FootfallEventType;
+  currentOccupancy: number;
+  isDuplicate: boolean;
+  processedAt: string;
+}
+export interface BatchIngestFootfallResponseDTO {
+  success: boolean;
+  totalReceived: number;
+  inserted: number;
+  duplicates: number;
+  currentOccupancy: number;
+}
+
+// ---------------------------------------------------------------------------
+// Prediction Schemas & DTO Types (Phase 12)
+// ---------------------------------------------------------------------------
+
+export const GetPredictionQuerySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional(),
+  serviceId: z.string().uuid('Invalid service UUID').optional(),
+});
+
+export type GetPredictionQueryInput = z.infer<typeof GetPredictionQuerySchema>;
+
+export interface PredictionSnapshotDTO {
+  id: string;
+  serviceId: string | null;
+  timestamp: Date | string;
+  predictedWaitSeconds: number;
+  predictedFootfall: number;
+  demandLevel: DemandLevel;
+  recommendation: string | null;
+  createdAt: Date | string;
+  service?: ServiceDTO | null;
+}
+
+export interface PredictionSummaryDTO {
+  serviceId: string;
+  serviceName: string;
+  serviceCode: string;
+  waitingCount: number;
+  activeCountersCount: number;
+  forecastedFootfallNextHour: number;
+  predictedWaitSeconds: number;
+  demandLevel: DemandLevel;
+  recommendation: string;
+  timestamp: string;
+}
+
+export interface RecalculatePredictionResponseDTO {
+  success: boolean;
+  totalServicesProcessed: number;
+  predictions: PredictionSummaryDTO[];
+  generatedAt: string;
+}

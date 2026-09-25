@@ -21,7 +21,7 @@ import { servicesRouter } from '../routes/services.js';
 import { errorHandler } from '../middleware/errorHandler.js';
 import { initSocketServer, closeSocketServer } from '../realtime/socketServer.js';
 import { eventBus } from '../events/eventBus.js';
-import { prisma } from '../db/client.js';
+import { prisma, disconnectDb } from '../db/client.js';
 
 describe('Realtime & Socket.IO Integration Tests', () => {
   const randomSuffix = Math.floor(Math.random() * 9000) + 1000;
@@ -145,6 +145,8 @@ describe('Realtime & Socket.IO Integration Tests', () => {
     await prisma.service.deleteMany({ where: { id: serviceId } });
     await prisma.user.deleteMany({ where: { clerkUserId: adminClerkId } });
     await prisma.user.deleteMany({ where: { clerkUserId: custClerkId } });
+
+    await disconnectDb();
   });
 
   function createClientSocket(): Promise<ClientSocket> {

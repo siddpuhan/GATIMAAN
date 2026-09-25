@@ -5,7 +5,7 @@ import request from 'supertest';
 import { createApp } from '../app.js';
 import { ticketsRouter } from '../routes/tickets.js';
 import { errorHandler } from '../middleware/errorHandler.js';
-import { prisma } from '../db/client.js';
+import { prisma, disconnectDb } from '../db/client.js';
 
 describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
   const randomSuffix = Math.floor(Math.random() * 9000) + 1000;
@@ -166,6 +166,8 @@ describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
     await prisma.user.deleteMany({
       where: { clerkUserId: { in: [adminClerkId1, adminClerkId2, custClerkId] } },
     });
+
+    await disconnectDb();
   });
 
   describe('Ticket Issuance (POST /api/tickets/issue)', () => {
@@ -486,6 +488,83 @@ describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
       assert.equal(cancelRes.status, 200, `Cancel Error: ${JSON.stringify(cancelRes.body)}`);
       assert.equal(cancelRes.body.ticket.status, 'CANCELLED');
       assert.ok(cancelRes.body.ticket.cancelledAt);
+    });
+
+    it('should allow cancelling a ticket using human-facing ticketNumber', async () => {
+      const app = createApp();
+      const t = await request(app)
+        .post('/api/tickets/issue')
+        .send({ serviceId: activeServiceId });
+
+      const cancelRes = await request(app)
+        .post(`/api/tickets/${t.body.ticketNumber}/cancel`);
+
+      assert.equal(cancelRes.status, 200, `Cancel Error: ${JSON.stringify(cancelRes.body)}`);
+      assert.equal(cancelRes.body.ticket.status, 'CANCELLED');
+      assert.equal(cancelRes.body.ticket.id, t.body.id);
+    });
+  });
+
+  describe('Ticket Retrieval & Track Token (Dual UUID / ticketNumber Resolution)', () => {
+    let testTicketUuid: string;
+    let testTicketNumber: string;
+
+    before(async () => {
+      const app = createApp();
+      const res = await request(app)
+        .post('/api/tickets/issue')
+        .send({ serviceId: activeServiceId, priority: 1 });
+      testTicketUuid = res.body.id;
+      testTicketNumber = res.body.ticketNumber;
+    });
+
+    it('should retrieve ticket details using database UUID', async () => {
+      const app = createApp();
+      const res = await request(app).get(`/api/tickets/${testTicketUuid}`);
+      assert.equal(res.status, 200);
+      assert.equal(res.body.id, testTicketUuid);
+      assert.equal(res.body.ticketNumber, testTicketNumber);
+    });
+
+    it('should retrieve ticket details using human-facing ticketNumber (exact and lowercase)', async () => {
+      const app = createApp();
+
+      // Exact case (e.g. A001)
+      const resExact = await request(app).get(`/api/tickets/${testTicketNumber}`);
+      assert.equal(resExact.status, 200);
+      assert.equal(resExact.body.id, testTicketUuid);
+      assert.equal(resExact.body.ticketNumber, testTicketNumber);
+
+      // Lowercase (e.g. a001)
+      const resLower = await request(app).get(`/api/tickets/${testTicketNumber.toLowerCase()}`);
+      assert.equal(resLower.status, 200);
+      assert.equal(resLower.body.id, testTicketUuid);
+      assert.equal(resLower.body.ticketNumber, testTicketNumber);
+    });
+
+    it('should calculate queue position using human-facing ticketNumber', async () => {
+      const app = createApp();
+      const res = await request(app).get(`/api/tickets/${testTicketNumber}/position`);
+      assert.equal(res.status, 200);
+      assert.equal(res.body.ticketId, testTicketUuid);
+      assert.equal(res.body.ticketNumber, testTicketNumber);
+      assert.ok(typeof res.body.position === 'number');
+    });
+
+    it('should return 404 for invalid/non-existent identifier (both invalid UUID and invalid token)', async () => {
+      const app = createApp();
+
+      // Non-existent UUID
+      const resUuid = await request(app).get('/api/tickets/00000000-0000-0000-0000-000000000000');
+      assert.equal(resUuid.status, 404);
+
+      // Non-existent token number
+      const resToken = await request(app).get('/api/tickets/NONEXISTENT999');
+      assert.equal(resToken.status, 404);
+
+      // Non-existent position lookup
+      const resPos = await request(app).get('/api/tickets/NONEXISTENT999/position');
+      assert.equal(resPos.status, 404);
     });
   });
 

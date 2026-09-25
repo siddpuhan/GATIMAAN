@@ -5,7 +5,7 @@ import request from 'supertest';
 import { createApp } from '../app.js';
 import { countersRouter } from '../routes/counters.js';
 import { errorHandler } from '../middleware/errorHandler.js';
-import { prisma } from '../db/client.js';
+import { prisma, disconnectDb } from '../db/client.js';
 
 function createAdminApp() {
   const app = express();
@@ -65,6 +65,8 @@ describe('Counters and Counter Sessions API Integration Tests', () => {
     await prisma.user.deleteMany({
       where: { clerkUserId: { in: ['test_admin_counters', 'test_cust_counters'] } },
     });
+
+    await disconnectDb();
   });
 
   it('should reject unauthenticated request to GET /api/counters with 401', async () => {

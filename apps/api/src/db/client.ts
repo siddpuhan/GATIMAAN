@@ -17,7 +17,7 @@ if (globalThis.__pgPool) {
 } else {
   pool = new pg.Pool({
     connectionString,
-    max: 10,
+    max: Number(process.env.DB_POOL_MAX ?? 5),
     idleTimeoutMillis: 10000,
     connectionTimeoutMillis: 30000,
     keepAlive: true,
@@ -59,6 +59,8 @@ export async function connectDb(): Promise<void> {
 export async function disconnectDb(): Promise<void> {
   await prisma.$disconnect();
   await pool.end();
+  globalThis.__pgPool = undefined;
+  globalThis.__prismaClient = undefined;
 }
 
 export * from '../generated/client/client.js';
