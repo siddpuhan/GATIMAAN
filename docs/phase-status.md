@@ -73,11 +73,33 @@ This document tracks the progress and verification status across all phases of t
   - [x] Mobile-responsive layout, accessibility focus states, and zero polling via Socket.IO realtime subscriptions
   - [x] Automated unit and integration test suite passing across API and Web packages
 
-- [ ] **Phase 9: Waiting Time Prediction Engine (Pure TS Statistical)**
-- [ ] **Phase 10: Hardware Gate Controller / ESP32 Integration (Firmware & API Gateways)**
-- [ ] **Phase 11: Notification Service (SMS/WhatsApp/Push Alerts)**
-- [ ] **Phase 12: Operator / Counter Dashboard (Calling, Serving, Transferring)**
+- [x] **Phase 9: Admin Queue Desk & Counter Calling Interface**
+  - [x] Protected Admin operator portal with Clerk RBAC
+  - [x] Desk selection, active session management, and counter state tracking
+  - [x] Call-next ticket dequeue (`SELECT FOR UPDATE SKIP LOCKED`)
+  - [x] Full desk calling lifecycle: `CALLED` -> `SERVING` -> `COMPLETED` / `NO_SHOW`
+  - [x] Zero-layout shift floating notifications and real-time counter updates
+- [x] **Phase 10: Dynamic Wait-Time (ETA) Engine**
+  - [x] Pure deterministic statistical calculation (`EtaService`)
+  - [x] Dynamic FIFO queue position and effective duration calculation
+  - [x] Rolling average service duration from completed tickets
+  - [x] Canonical demand level classification (`LOW`, `MEDIUM`, `HIGH`, `SURGE`)
+  - [x] Integrated in ticket lifecycle and realtime queue broadcasts
+- [x] **Phase 11: IoT Simulator + Footfall Ingestion**
+  - [x] Hardware device authentication middleware (`requireDeviceAuth`) via SHA-256 `keyHash`
+  - [x] Idempotent single and batch footfall event ingestion (`POST /api/iot/footfall`, `POST /api/iot/footfall/batch`)
+  - [x] Real-time net occupancy tracking ($\ge 0$) and Socket.IO `footfall.updated` broadcasts
+  - [x] Hourly `FootfallSnapshot` generation and admin telemetry endpoints (`/api/footfall/current`, `/api/footfall/snapshots`)
+  - [x] Multi-mode CLI Simulator (`npm run simulate:footfall` supporting live, burst, and offline-replay modes)
+- [x] **Phase 12: Pure TypeScript Statistical Prediction Engine**
+  - [x] Next-hour footfall arrival forecasting (`predictNextHourFootfall`) using weighted historical recency / EMA
+  - [x] Forward-looking queue wait-time estimation (`estimateProjectedWaitSeconds`)
+  - [x] Deterministic operational staffing recommendations (`generateRecommendation`)
+  - [x] Persistent `PredictionSnapshot` records and on-demand recalculation (`recalculateAllPredictions`)
+  - [x] Admin endpoints: `GET /api/prediction/current`, `GET /api/prediction/snapshots`, `POST /api/prediction/recalculate`
+  - [x] Realtime `prediction.updated` broadcasting to Socket.IO `'prediction'` room
+  - [x] Zero external ML/LLM/Python dependencies (100% pure TypeScript)
 - [ ] **Phase 13: Admin Dashboard & Analytics / Heatmaps**
-- [ ] **Phase 14: Simulator & Load Testing Tools**
+- [ ] **Phase 14: Notification Service (SMS / WhatsApp / Push Alerts)**
 - [ ] **Phase 15: Security Hardening & Performance Optimization**
 - [ ] **Phase 16: Deployment, Monitoring & Production Readiness**

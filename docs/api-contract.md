@@ -349,7 +349,55 @@ All telemetry endpoints require `ADMIN` role.
 
 ---
 
-## 7. Realtime & Socket.IO Subscriptions (Phase 7 & Phase 11)
+## 7. Prediction Engine Endpoints (Phase 12)
+
+All prediction endpoints require `ADMIN` role.
+
+### `GET /api/prediction/current`
+- **Auth**: `requireAuth`, `requireRole(UserRole.ADMIN)`
+- **Description**: Returns live queue wait time predictions, forecasted next-hour footfall, demand congestion tiers, and operational recommendations for all active services.
+- **Response**: `200 OK` — Array of `PredictionSummaryDTO`
+```json
+[
+  {
+    "serviceId": "3c1d2334-08df-4493-9793-9017ddc095f9",
+    "serviceName": "Aadhaar Enrollment / Update Assistance",
+    "serviceCode": "AAD",
+    "waitingCount": 4,
+    "activeCountersCount": 2,
+    "forecastedFootfallNextHour": 18,
+    "predictedWaitSeconds": 480,
+    "demandLevel": "LOW",
+    "recommendation": "Normal operating capacity. Service queue is flowing smoothly.",
+    "timestamp": "2026-09-25T10:00:00.000Z"
+  }
+]
+```
+
+### `GET /api/prediction/snapshots`
+- **Auth**: `requireAuth`, `requireRole(UserRole.ADMIN)`
+- **Description**: Retrieves historical prediction snapshots for analytics and auditing.
+- **Query Params**:
+  - `date` (optional, `YYYY-MM-DD`)
+  - `serviceId` (optional, UUID)
+- **Response**: `200 OK` — Array of `PredictionSnapshotDTO`
+
+### `POST /api/prediction/recalculate`
+- **Auth**: `requireAuth`, `requireRole(UserRole.ADMIN)`
+- **Description**: Triggers an on-demand recalculation of predictions across all active services, persists new `PredictionSnapshot` records, and broadcasts `prediction.updated` events over Socket.IO.
+- **Response**: `200 OK` — `RecalculatePredictionResponseDTO`
+```json
+{
+  "success": true,
+  "totalServicesProcessed": 10,
+  "predictions": [ ... ],
+  "generatedAt": "2026-09-25T10:00:00.000Z"
+}
+```
+
+---
+
+## 8. Realtime & Socket.IO Subscriptions (Phase 7, Phase 11 & Phase 12)
 
 Socket.IO server operates on the unified HTTP server (`ws://` / `http://` transport with polling fallback).
 
