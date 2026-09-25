@@ -13,6 +13,8 @@
     "dev:web": "npm run dev -w @gatimaan/web",
     "build": "npm run build --workspaces --if-present",
     "prisma:generate": "npm run prisma:generate --workspaces --if-present",
+    "prisma:deploy": "npm run prisma:deploy --workspaces --if-present",
+    "prisma:seed": "npm run prisma:seed --workspaces --if-present",
     "postinstall": "npm run prisma:generate --workspaces --if-present",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
