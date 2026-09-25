@@ -395,7 +395,6 @@ export interface IngestFootfallResponseDTO {
   isDuplicate: boolean;
   processedAt: string;
 }
-
 export interface BatchIngestFootfallResponseDTO {
   success: boolean;
   totalReceived: number;
@@ -404,5 +403,45 @@ export interface BatchIngestFootfallResponseDTO {
   currentOccupancy: number;
 }
 
+// ---------------------------------------------------------------------------
+// Prediction Schemas & DTO Types (Phase 12)
+// ---------------------------------------------------------------------------
 
+export const GetPredictionQuerySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional(),
+  serviceId: z.string().uuid('Invalid service UUID').optional(),
+});
 
+export type GetPredictionQueryInput = z.infer<typeof GetPredictionQuerySchema>;
+
+export interface PredictionSnapshotDTO {
+  id: string;
+  serviceId: string | null;
+  timestamp: Date | string;
+  predictedWaitSeconds: number;
+  predictedFootfall: number;
+  demandLevel: DemandLevel;
+  recommendation: string | null;
+  createdAt: Date | string;
+  service?: ServiceDTO | null;
+}
+
+export interface PredictionSummaryDTO {
+  serviceId: string;
+  serviceName: string;
+  serviceCode: string;
+  waitingCount: number;
+  activeCountersCount: number;
+  forecastedFootfallNextHour: number;
+  predictedWaitSeconds: number;
+  demandLevel: DemandLevel;
+  recommendation: string;
+  timestamp: string;
+}
+
+export interface RecalculatePredictionResponseDTO {
+  success: boolean;
+  totalServicesProcessed: number;
+  predictions: PredictionSummaryDTO[];
+  generatedAt: string;
+}

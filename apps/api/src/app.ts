@@ -9,6 +9,7 @@ import { countersRouter } from './routes/counters.js';
 import { ticketsRouter } from './routes/tickets.js';
 import { iotRouter } from './routes/iot.js';
 import { footfallRouter } from './routes/footfall.js';
+import { predictionRouter } from './routes/prediction.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 
 export function createApp(): Express {
@@ -40,6 +41,7 @@ export function createApp(): Express {
   app.use('/', ticketsRouter);
   app.use('/', iotRouter);
   app.use('/', footfallRouter);
+  app.use('/', predictionRouter);
 
 
   // Error handling
