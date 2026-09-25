@@ -30,6 +30,12 @@ jobs:
       - name: Generate Prisma Client
         run: npm run prisma:generate
 
+      - name: Apply Prisma Migrations
+        run: npm run prisma:deploy
+
+      - name: Seed Database
+        run: npm run prisma:seed
+
       - name: Run ESLint
         run: npm run lint
 
@@ -38,4 +44,7 @@ jobs:
 
       - name: Run Tests
         run: npm test
+
+      - name: Build Packages
+        run: npm run build
 
