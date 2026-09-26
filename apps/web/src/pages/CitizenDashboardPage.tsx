@@ -163,9 +163,9 @@ export function CitizenDashboardPage() {
                 <span>→</span>
               </Button>
 
-              <Link to="/track">
+              <Link to="/services">
                 <Button variant="outline" size="md" className="border-slate-700 text-slate-200 hover:bg-slate-800">
-                  <span>Track Another Token</span>
+                  <span>Browse More Services</span>
                 </Button>
               </Link>
             </div>
@@ -188,9 +188,9 @@ export function CitizenDashboardPage() {
                 <span>→</span>
               </Button>
             </Link>
-            <Link to="/track">
+            <Link to="/">
               <Button variant="outline" size="md">
-                <span>Track an Existing Token</span>
+                <span>Return to Home</span>
               </Button>
             </Link>
           </div>

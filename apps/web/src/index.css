@@ -1,5 +1,114 @@
 @import 'tailwindcss';
 
+/* ==========================================================================
+   GATIMAAN Citizen Design System — Tokens (Tailwind CSS v4 @theme)
+   --------------------------------------------------------------------------
+   Single source of truth for citizen-facing color, radius, and motion
+   primitives. Pages use semantic Tailwind palette classes (slate / emerald /
+   amber / rose) which this theme maps onto; component primitives consume
+   these custom tokens where a fixed civic value is required.
+   ========================================================================== */
+
+@theme {
+  /* -- Color: Primary (institutional deep navy, gov-service oriented) ---- */
+  --color-gov-navy: #0f172a; /* primary surface ink: headers, focal cards   */
+  --color-gov-navy-hover: #1e293b; /* hover state for primary surfaces        */
+  --color-gov-blue: #1e40af; /* reserved accent: links & focus rings only   */
+  --color-gov-green: #047857; /* success / active / available               */
+  --color-gov-amber: #b45309; /* warning / approaching / attention          */
+  --color-gov-red: #be123c; /* error / cancelled                             */
+  --color-gov-neutral: #64748b; /* inactive / unavailable                    */
+
+  /* -- Surface & lines --------------------------------------------------- */
+  --color-gov-surface: #f8fafc; /* page background (very light neutral)      */
+  --color-gov-surface-raised: #ffffff; /* cards, header, footer              */
+  --color-gov-border: #e2e8f0; /* default hairline border                   */
+  --color-gov-border-strong: #cbd5e1; /* emphasized borders, inputs         */
+
+  /* -- Typography scale (system sans, readability-first) ----------------- */
+  --text-page-title: 1.5rem; /* 24px — one per page, max                     */
+  --text-page-title--line-height: 2rem;
+  --text-section-heading: 1.125rem; /* 18px                                  */
+  --text-section-heading--line-height: 1.75rem;
+  --text-card-heading: 1rem; /* 16px                                         */
+  --text-card-heading--line-height: 1.5rem;
+  --text-body: 0.875rem; /* 14px                                              */
+  --text-body--line-height: 1.375rem;
+  --text-secondary: 0.75rem; /* 12px                                          */
+  --text-secondary--line-height: 1.125rem;
+  --text-label: 0.6875rem; /* 11px — uppercase metadata labels                */
+  --text-label--line-height: 1rem;
+  --text-caption: 0.625rem; /* 10px — sparse use only                        */
+  --text-caption--line-height: 0.875rem;
+
+  /* -- Radius system: subtle & functional, not bubbly -------------------- */
+  --radius-card: 0.75rem; /* 12px — standard cards                            */
+  --radius-control: 0.625rem; /* 10px — buttons, inputs, chips                */
+  --radius-focal: 1rem; /* 16px — hero/focal surfaces only                    */
+  --radius-pill: 999px; /* badges & live indicators                           */
+
+  /* -- Motion: calm, minimal -------------------------------------------- */
+  --animate-citizen-pulse: citizen-pulse 2s ease-in-out infinite;
+
+  @keyframes citizen-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.4;
+    }
+  }
+}
+
+/* ==========================================================================
+   Global baseline
+   ========================================================================== */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  /* Deliberate single font stack — clean modern sans-serif, no webfont cost */
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    'Noto Sans',
+    'Noto Sans Devanagari',
+    sans-serif;
+  background-color: var(--color-gov-surface);
+  color: #0f172a;
+}
+
+/* ==========================================================================
+   Accessibility baseline
+   ========================================================================== */
+
+/* Respect users who disable animations at the OS level (queue pulses, spins) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* ==========================================================================
+   Existing accessibility utilities (preserved from prior phases)
+   ========================================================================== */
+
 /* High contrast and font scaling utility definitions */
 .text-scale-sm {
   font-size: 0.9375rem;

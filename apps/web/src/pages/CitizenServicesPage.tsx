@@ -6,7 +6,6 @@ import { ServiceGrid } from '../components/customer/ServiceGrid.js';
 import { ActiveTicketBanner } from '../components/customer/ActiveTicketBanner.js';
 import { useServicesSubscription } from '../hooks/useRealtime.js';
 import { AlertBanner } from '../components/ui/FeedbackStates.js';
-import { Button } from '../components/ui/Button.js';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card.js';
 import {
   getActiveTicketId,
@@ -29,9 +28,6 @@ export function CitizenServicesPage() {
   const [isCheckingActiveTicket, setIsCheckingActiveTicket] = useState(true);
   const [issuingServiceId, setIssuingServiceId] = useState<string | null>(null);
   const [issueError, setIssueError] = useState<string | null>(null);
-
-  const [lookupId, setLookupId] = useState('');
-  const [lookupError, setLookupError] = useState<string | null>(null);
 
   // 1. Fetch available services
   const fetchServices = useCallback(async () => {
@@ -154,17 +150,6 @@ export function CitizenServicesPage() {
     }
   };
 
-  // 4. Handle manual ticket lookup
-  const handleLookupSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanId = lookupId.trim();
-    if (!cleanId) {
-      setLookupError('Please enter a valid Token ID or Token Number');
-      return;
-    }
-    navigate(`/ticket/${cleanId}`);
-  };
-
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
       {/* Breadcrumb Navigation */}
@@ -259,43 +244,9 @@ export function CitizenServicesPage() {
         />
       </section>
 
-      {/* Quick Lookup & Citizen Information Strip */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
-        {/* Token Lookup Box */}
-        <Card className="md:col-span-1">
-          <CardHeader>
-            <CardTitle>Track Existing Token</CardTitle>
-            <CardDescription>
-              Enter your Token Number or Token ID to view live waiting status
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLookupSubmit} className="space-y-3">
-              <div>
-                <input
-                  type="text"
-                  value={lookupId}
-                  onChange={(e) => {
-                    setLookupId(e.target.value);
-                    setLookupError(null);
-                  }}
-                  placeholder="e.g. DOM001 or Token ID..."
-                  className="w-full px-3.5 py-2.5 text-xs border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 font-mono uppercase"
-                />
-                {lookupError && (
-                  <p className="text-[11px] text-rose-600 font-medium mt-1">{lookupError}</p>
-                )}
-              </div>
-              <Button type="submit" variant="primary" size="md" fullWidth>
-                <span>Track Token</span>
-                <span>→</span>
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* Citizen Facilitation Information */}
-        <Card className="md:col-span-2">
+      {/* Citizen Facilitation Information */}
+      <section className="grid grid-cols-1 md:grid-cols-1 gap-6 pt-2">
+        <Card>
           <CardHeader>
             <CardTitle>Citizen Guidelines & Information</CardTitle>
             <CardDescription>
