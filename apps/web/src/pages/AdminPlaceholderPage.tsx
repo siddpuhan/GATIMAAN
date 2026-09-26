@@ -20,7 +20,7 @@ export function AdminPlaceholderPage({
   icon = '📊',
 }: AdminPlaceholderPageProps) {
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       <div className="flex items-center gap-2 text-xs text-slate-500">
         <Link to="/admin" className="hover:text-slate-800 transition">
           Admin Portal

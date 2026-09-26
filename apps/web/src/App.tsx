@@ -148,8 +148,10 @@ export function App() {
       <main
         id="main-content"
         tabIndex={-1}
-        className={`flex-1 w-full mx-auto p-4 sm:p-6 lg:px-8 xl:px-10 lg:py-8 focus:outline-none ${
-          isAdminRoute ? 'max-w-7xl' : 'max-w-[1440px]'
+        className={`flex-1 w-full focus:outline-none ${
+          isAdminRoute
+            ? 'max-w-none px-3 sm:px-5 lg:px-6 xl:px-8 py-3 sm:py-4 lg:py-5'
+            : 'max-w-[1440px] mx-auto p-4 sm:p-6 lg:px-8 xl:px-10 lg:py-8'
         }`}
       >
         <Routes>

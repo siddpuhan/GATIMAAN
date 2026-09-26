@@ -71,7 +71,7 @@ export function AdminShellPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-140px)] flex bg-slate-100 rounded-3xl overflow-hidden border border-slate-200 shadow-xs">
+    <div className="min-h-[calc(100vh-140px)] w-full flex bg-slate-100 rounded-3xl overflow-hidden border border-slate-200 shadow-xs">
       {/* Persistent / Responsive Left Sidebar */}
       <AdminSidebar
         isOpen={mobileSidebarOpen}
