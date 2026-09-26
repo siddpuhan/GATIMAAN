@@ -6,11 +6,24 @@ import { CitizenHeader } from './components/citizen/CitizenHeader.js';
 import { CitizenFooter } from './components/citizen/CitizenFooter.js';
 import { LandingPage } from './pages/LandingPage.js';
 import { CitizenServicesPage } from './pages/CitizenServicesPage.js';
-import { CitizenDashboardPage } from './pages/CitizenDashboardPage.js';
 import { TicketTrackingPage } from './pages/TicketTrackingPage.js';
 import { SignInPage } from './pages/SignInPage.js';
 import { SignUpPage } from './pages/SignUpPage.js';
 import { AdminShellPage } from './pages/AdminShellPage.js';
+import { getActiveTicketId } from './lib/ticketStorage.js';
+
+/**
+ * Consolidated redirect for legacy / convenience routes (/dashboard, /track, /ticket).
+ * If the citizen has an active queue pass on this device, takes them straight to the live pass.
+ * Otherwise, gracefully leads them to the Service Catalogue to find a service and get a token.
+ */
+function ActiveTokenRedirect() {
+  const activeId = getActiveTicketId();
+  if (activeId) {
+    return <Navigate to={`/ticket/${activeId}`} replace />;
+  }
+  return <Navigate to="/services" replace />;
+}
 
 export function App() {
   const location = useLocation();
@@ -26,7 +39,7 @@ export function App() {
 
   return (
     <div
-      className={`min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 antialiased ${fontScaleClass} ${
+      className={`min-h-screen bg-[#D6CCC2] flex flex-col font-sans text-slate-900 antialiased ${fontScaleClass} ${
         highContrast ? 'theme-high-contrast' : ''
       }`}
     >
@@ -39,8 +52,8 @@ export function App() {
       </a>
 
       {/* 2. Top Government of Madhya Pradesh Identity Strip */}
-      <div className="bg-slate-900 text-slate-100 text-xs py-2 px-4 sm:px-6 border-b border-slate-800">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+      <div className="bg-slate-900 text-slate-100 text-xs py-2 px-4 sm:px-6 lg:px-8 xl:px-10 border-b border-slate-800">
+        <div className="max-w-[1440px] mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div className="flex items-center gap-3">
             {/* State Emblem Slot */}
             <div
@@ -135,8 +148,8 @@ export function App() {
       <main
         id="main-content"
         tabIndex={-1}
-        className={`flex-1 w-full mx-auto p-4 sm:p-6 lg:py-8 focus:outline-none ${
-          isAdminRoute ? 'max-w-7xl' : 'max-w-6xl'
+        className={`flex-1 w-full mx-auto p-4 sm:p-6 lg:px-8 xl:px-10 lg:py-8 focus:outline-none ${
+          isAdminRoute ? 'max-w-7xl' : 'max-w-[1440px]'
         }`}
       >
         <Routes>
@@ -146,14 +159,10 @@ export function App() {
           {/* Citizen Service Catalogue */}
           <Route path="/services" element={<CitizenServicesPage />} />
 
-          {/* Citizen Active-Token Dashboard */}
-          <Route path="/dashboard" element={<CitizenDashboardPage />} />
-
-          {/* Legacy manual token-search entry point.
-              Phase U1 removed the Track Token IA: citizens are taken to the
-              live ticket experience automatically after issuance (Phase U4).
-              Backwards-compatible redirect only — no backend change. */}
-          <Route path="/track" element={<Navigate to="/dashboard" replace />} />
+          {/* Redundant Dashboard & Legacy Routes -> Consolidated Live Pass / Services Redirect */}
+          <Route path="/dashboard" element={<ActiveTokenRedirect />} />
+          <Route path="/track" element={<ActiveTokenRedirect />} />
+          <Route path="/ticket" element={<ActiveTokenRedirect />} />
 
           {/* Specific Ticket Live-Status Pages */}
           <Route path="/ticket/:id" element={<TicketTrackingPage />} />

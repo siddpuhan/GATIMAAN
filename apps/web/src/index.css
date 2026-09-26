@@ -20,10 +20,10 @@
   --color-gov-neutral: #64748b; /* inactive / unavailable                    */
 
   /* -- Surface & lines --------------------------------------------------- */
-  --color-gov-surface: #f8fafc; /* page background (very light neutral)      */
-  --color-gov-surface-raised: #ffffff; /* cards, header, footer              */
-  --color-gov-border: #e2e8f0; /* default hairline border                   */
-  --color-gov-border-strong: #cbd5e1; /* emphasized borders, inputs         */
+  --color-gov-surface: #d6ccc2; /* page background canvas                     */
+  --color-gov-surface-raised: #ffffff; /* cards, header, surfaces            */
+  --color-gov-border: #c5b9ac; /* default border for canvas-card separation */
+  --color-gov-border-strong: #a89a8b; /* emphasized borders                 */
 
   /* -- Typography scale (system sans, readability-first) ----------------- */
   --text-page-title: 1.5rem; /* 24px — one per page, max                     */
@@ -82,7 +82,7 @@ body {
     'Noto Sans',
     'Noto Sans Devanagari',
     sans-serif;
-  background-color: var(--color-gov-surface);
+  background-color: #d6ccc2;
   color: #0f172a;
 }
 

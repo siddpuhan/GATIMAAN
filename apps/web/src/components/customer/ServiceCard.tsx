@@ -39,21 +39,21 @@ export function ServiceCard({
   const isQueueOpen = service.isActive;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs hover:border-slate-400 hover:shadow-xs transition-all duration-200 flex flex-col justify-between group">
+    <div className="bg-white rounded-2xl border border-[#B8AEA4] p-5 sm:p-6 hover:border-slate-900 transition-all duration-200 flex flex-col justify-between group">
       <div>
         {/* Header: Prefix Identifier & Queue Availability */}
         <div className="flex items-center justify-between gap-2 mb-3">
-          <Badge variant="navy" size="sm">
-            <span className="font-mono font-bold">Prefix: {service.prefix}</span>
-          </Badge>
+          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-[#0B1220] text-white border border-[#0B1220] tracking-wider shadow-2xs">
+            Prefix: {service.prefix}
+          </span>
 
           {isQueueOpen ? (
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-300">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
               Queue Open
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-300">
               <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
               Queue Closed
             </span>
@@ -61,37 +61,37 @@ export function ServiceCard({
         </div>
 
         {/* Primary English Title */}
-        <h3 className="text-base font-bold text-slate-900 group-hover:text-slate-800 transition-colors leading-snug">
+        <h3 className="text-base sm:text-lg font-black text-[#0B1730] group-hover:text-slate-950 transition-colors leading-snug">
           {service.name}
         </h3>
 
         {/* Subtle Hindi Subtitle */}
         {hindiTitle && (
-          <p className="text-xs text-slate-500 font-medium mt-0.5 tracking-wide">
+          <p className="text-xs text-slate-500 font-semibold mt-0.5 tracking-wide">
             {hindiTitle}
           </p>
         )}
 
         {/* Description: Clean text wrapping without awkward truncation */}
-        <p className="text-xs text-slate-600 mt-2 leading-relaxed min-h-[36px]">
-          {service.description || 'Public government service desk for token issuance.'}
+        <p className="text-xs text-slate-600 mt-2.5 leading-relaxed min-h-[38px]">
+          {service.description || 'Public government service desk for digital token issuance.'}
         </p>
       </div>
 
       {/* Metrics & Action Footer */}
-      <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between gap-3">
+      <div className="mt-5 pt-3.5 border-t border-slate-200 flex items-center justify-between gap-3">
         <div className="space-y-0.5 min-w-0">
           {waitingCount !== undefined ? (
             waitingCount === 0 ? (
-              <div className="text-xs font-semibold text-emerald-700 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <div className="text-xs font-semibold text-[#08634B] flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#0E8F6E]" />
                 <span>No citizens waiting</span>
               </div>
             ) : (
               <div className="text-xs text-slate-800">
-                <span className="font-bold text-slate-900">{waitingCount} waiting</span>
+                <span className="font-bold text-slate-950">{waitingCount} waiting</span>
                 <span className="text-slate-400 mx-1">•</span>
-                <span className="text-slate-600 font-medium">
+                <span className="text-slate-700 font-semibold">
                   {estimatedWaitSeconds !== undefined && estimatedWaitSeconds !== null
                     ? `~${formatWaitTime(estimatedWaitSeconds)} wait`
                     : `~${waitingCount * (service.avgDurationMinutes || 15)}m wait`}
@@ -99,7 +99,7 @@ export function ServiceCard({
               </div>
             )
           ) : (
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-slate-600 font-medium">
               Est. {service.avgDurationMinutes} mins / citizen
             </div>
           )}
@@ -112,7 +112,7 @@ export function ServiceCard({
           isLoading={isIssuing}
           loadingText="Issuing..."
           onClick={() => onIssueTicket(service.id)}
-          className="shrink-0"
+          className="shrink-0 bg-[#0E8F6E] hover:bg-[#0c7a5e] text-white font-bold rounded-xl px-4 py-2 text-xs transition cursor-pointer"
         >
           <span>Get Token</span>
           <svg

@@ -171,9 +171,19 @@ describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
   });
 
   describe('Ticket Issuance (POST /api/tickets/issue)', () => {
-    it('should reject ticket issuance for nonexistent service with 404', async () => {
+    it('should reject unauthenticated request to POST /api/tickets/issue with 401', async () => {
       const app = createApp();
       const res = await request(app)
+        .post('/api/tickets/issue')
+        .send({ serviceId: activeServiceId });
+
+      assert.equal(res.status, 401);
+      assert.equal(res.body.error, 'Unauthorized');
+    });
+
+    it('should reject ticket issuance for nonexistent service with 404', async () => {
+      const customerApp = createCustomerApp();
+      const res = await request(customerApp)
         .post('/api/tickets/issue')
         .send({ serviceId: '00000000-0000-0000-0000-000000000000' });
 
@@ -182,8 +192,8 @@ describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
     });
 
     it('should reject ticket issuance for inactive service with 400', async () => {
-      const app = createApp();
-      const res = await request(app)
+      const customerApp = createCustomerApp();
+      const res = await request(customerApp)
         .post('/api/tickets/issue')
         .send({ serviceId: inactiveServiceId });
 
@@ -192,8 +202,8 @@ describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
     });
 
     it('should issue first ticket sequentially with prefix and 001', async () => {
-      const app = createApp();
-      const res = await request(app)
+      const customerApp = createCustomerApp();
+      const res = await request(customerApp)
         .post('/api/tickets/issue')
         .send({ serviceId: activeServiceId });
 
@@ -205,8 +215,8 @@ describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
     });
 
     it('should issue second ticket sequentially with prefix and 002', async () => {
-      const app = createApp();
-      const res = await request(app)
+      const customerApp = createCustomerApp();
+      const res = await request(customerApp)
         .post('/api/tickets/issue')
         .send({ serviceId: activeServiceId });
 
@@ -215,11 +225,11 @@ describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
     });
 
     it('should issue tickets concurrently without duplicate numbers or collisions', async () => {
-      const app = createApp();
+      const customerApp = createCustomerApp();
       const promises = [
-        request(app).post('/api/tickets/issue').send({ serviceId: activeServiceId }),
-        request(app).post('/api/tickets/issue').send({ serviceId: activeServiceId }),
-        request(app).post('/api/tickets/issue').send({ serviceId: activeServiceId }),
+        request(customerApp).post('/api/tickets/issue').send({ serviceId: activeServiceId }),
+        request(customerApp).post('/api/tickets/issue').send({ serviceId: activeServiceId }),
+        request(customerApp).post('/api/tickets/issue').send({ serviceId: activeServiceId }),
       ];
 
       const responses = await Promise.all(promises);
@@ -256,19 +266,19 @@ describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
         where: { serviceId: activeServiceId },
       });
 
-      const app = createApp();
-      const t1 = await request(app)
+      const customerApp = createCustomerApp();
+      const t1 = await request(customerApp)
         .post('/api/tickets/issue')
         .send({ serviceId: activeServiceId, priority: 1 });
       ticket1Id = t1.body.id;
 
-      const t2 = await request(app)
+      const t2 = await request(customerApp)
         .post('/api/tickets/issue')
         .send({ serviceId: activeServiceId, priority: 1 });
       ticket2Id = t2.body.id;
 
       // Higher priority ticket issued later
-      const tPriority = await request(app)
+      const tPriority = await request(customerApp)
         .post('/api/tickets/issue')
         .send({ serviceId: activeServiceId, priority: 5 });
       priorityTicketId = tPriority.body.id;
@@ -350,8 +360,8 @@ describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
       });
 
       // Issue a waiting ticket
-      const app = createApp();
-      const res = await request(app)
+      const customerApp = createCustomerApp();
+      const res = await request(customerApp)
         .post('/api/tickets/issue')
         .send({ serviceId: activeServiceId });
       lifecycleTicketId = res.body.id;
@@ -448,14 +458,8 @@ describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
 
   describe('Skip / No-Show & Ticket Cancellation', () => {
     it('should allow skipping a CALLED ticket (CALLED -> NO_SHOW)', async () => {
-      const app = createApp();
-
-      // Clear tickets for clean test state
-      await prisma.ticket.deleteMany({
-        where: { serviceId: activeServiceId },
-      });
-
-      await request(app)
+      const customerApp = createCustomerApp();
+      await request(customerApp)
         .post('/api/tickets/issue')
         .send({ serviceId: activeServiceId });
 
@@ -477,12 +481,12 @@ describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
     });
 
     it('should allow cancelling a WAITING ticket (WAITING -> CANCELLED)', async () => {
-      const app = createApp();
-      const t = await request(app)
+      const customerApp = createCustomerApp();
+      const t = await request(customerApp)
         .post('/api/tickets/issue')
         .send({ serviceId: activeServiceId });
 
-      const cancelRes = await request(app)
+      const cancelRes = await request(customerApp)
         .post(`/api/tickets/${t.body.id}/cancel`);
 
       assert.equal(cancelRes.status, 200, `Cancel Error: ${JSON.stringify(cancelRes.body)}`);
@@ -491,12 +495,12 @@ describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
     });
 
     it('should allow cancelling a ticket using human-facing ticketNumber', async () => {
-      const app = createApp();
-      const t = await request(app)
+      const customerApp = createCustomerApp();
+      const t = await request(customerApp)
         .post('/api/tickets/issue')
         .send({ serviceId: activeServiceId });
 
-      const cancelRes = await request(app)
+      const cancelRes = await request(customerApp)
         .post(`/api/tickets/${t.body.ticketNumber}/cancel`);
 
       assert.equal(cancelRes.status, 200, `Cancel Error: ${JSON.stringify(cancelRes.body)}`);
@@ -510,8 +514,8 @@ describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
     let testTicketNumber: string;
 
     before(async () => {
-      const app = createApp();
-      const res = await request(app)
+      const customerApp = createCustomerApp();
+      const res = await request(customerApp)
         .post('/api/tickets/issue')
         .send({ serviceId: activeServiceId, priority: 1 });
       testTicketUuid = res.body.id;
@@ -570,7 +574,7 @@ describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
 
   describe('High-Concurrency Call-Next Protection (FOR UPDATE SKIP LOCKED)', () => {
     it('should ensure two concurrent call-next requests dequeue distinct tickets', async () => {
-      const app = createApp();
+      const customerApp = createCustomerApp();
 
       // Clear tickets
       await prisma.ticket.deleteMany({
@@ -578,8 +582,8 @@ describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
       });
 
       // Issue 2 tickets
-      const t1 = await request(app).post('/api/tickets/issue').send({ serviceId: activeServiceId });
-      const t2 = await request(app).post('/api/tickets/issue').send({ serviceId: activeServiceId });
+      const t1 = await request(customerApp).post('/api/tickets/issue').send({ serviceId: activeServiceId });
+      const t2 = await request(customerApp).post('/api/tickets/issue').send({ serviceId: activeServiceId });
 
       assert.equal(t1.status, 201);
       assert.equal(t2.status, 201);
