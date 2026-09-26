@@ -51,8 +51,14 @@ export function extractRoleFromAuth(auth?: AuthData | (() => AuthData)): UserRol
     (publicMetadata?.role as string | undefined) ||
     (claims?.role as string | undefined);
 
-  if (typeof rawRole === 'string' && rawRole.toUpperCase() === UserRole.ADMIN) {
-    return UserRole.ADMIN;
+  if (typeof rawRole === 'string') {
+    const upper = rawRole.toUpperCase();
+    if (upper === UserRole.ADMIN) {
+      return UserRole.ADMIN;
+    }
+    if (upper === UserRole.OPERATOR) {
+      return UserRole.OPERATOR;
+    }
   }
 
   return UserRole.CUSTOMER;
@@ -134,19 +140,20 @@ export async function syncUserRecord(auth: NonNullable<AuthData | (() => AuthDat
     (claims?.first_name ? `${claims.first_name} ${claims.last_name || ''}`.trim() : null);
 
   const authoritativeRole = extractRoleFromAuth(authData);
+  const dbRole = authoritativeRole === UserRole.CUSTOMER ? 'CUSTOMER' : 'ADMIN';
 
   const localUser = await prisma.user.upsert({
     where: { clerkUserId },
     update: {
       email,
       name,
-      role: authoritativeRole,
+      role: dbRole,
     },
     create: {
       clerkUserId,
       email,
       name,
-      role: authoritativeRole,
+      role: dbRole,
     },
   });
 
@@ -156,7 +163,7 @@ export async function syncUserRecord(auth: NonNullable<AuthData | (() => AuthDat
     email: localUser.email,
     name: localUser.name,
     phone: localUser.phone,
-    role: localUser.role as UserRole,
+    role: authoritativeRole,
     createdAt: localUser.createdAt,
     updatedAt: localUser.updatedAt,
   };

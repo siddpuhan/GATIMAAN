@@ -62,6 +62,7 @@ export function QueueDesk() {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [servingDuration, setServingDuration] = useState<string>('00:00');
+  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
 
   // 1. Fetch initial counters and active services
   const fetchData = useCallback(async () => {
@@ -85,8 +86,18 @@ export function QueueDesk() {
       const countersData: CounterWithSessionDTO[] = await countersRes.json();
       const servicesData: ServiceDTO[] = servicesRes.ok ? await servicesRes.json() : [];
 
+      const activeServices = servicesData.filter((s) => s.isActive);
       setCounters(countersData);
-      setServices(servicesData.filter((s) => s.isActive));
+      setServices(activeServices);
+
+      if (activeServices.length > 0) {
+        setSelectedServiceId((current) => {
+          if (current && activeServices.some((s) => s.id === current)) {
+            return current;
+          }
+          return activeServices[0].id;
+        });
+      }
 
       // Auto-select counter: match active session of logged-in admin, or stored ID, or first counter
       if (countersData.length > 0) {
@@ -151,6 +162,11 @@ export function QueueDesk() {
   const selectedCounter = useMemo(() => {
     return counters.find((c) => c.id === selectedCounterId) || null;
   }, [counters, selectedCounterId]);
+
+  // Find currently selected service object
+  const selectedService = useMemo(() => {
+    return services.find((s) => s.id === selectedServiceId) || null;
+  }, [services, selectedServiceId]);
 
   // Check if selected counter has an active session
   const hasActiveSession = Boolean(selectedCounter?.currentSession?.isActive);
@@ -322,6 +338,7 @@ export function QueueDesk() {
       setActionType('callNext');
       setError(null);
       setSuccessMsg(null);
+      setShowSkipConfirm(false);
 
       const token = await getToken();
       const res = await fetch(`${API_BASE}/api/tickets/call-next`, {
@@ -368,6 +385,7 @@ export function QueueDesk() {
       setActionType('serve');
       setError(null);
       setSuccessMsg(null);
+      setShowSkipConfirm(false);
 
       const token = await getToken();
       const res = await fetch(`${API_BASE}/api/tickets/${activeTicket.id}/serve`, {
@@ -403,6 +421,7 @@ export function QueueDesk() {
       setActionType('complete');
       setError(null);
       setSuccessMsg(null);
+      setShowSkipConfirm(false);
 
       const token = await getToken();
       const res = await fetch(`${API_BASE}/api/tickets/${activeTicket.id}/complete`, {
@@ -439,6 +458,7 @@ export function QueueDesk() {
       setActionType('skip');
       setError(null);
       setSuccessMsg(null);
+      setShowSkipConfirm(false);
 
       const token = await getToken();
       const res = await fetch(`${API_BASE}/api/tickets/${activeTicket.id}/skip`, {
@@ -592,10 +612,10 @@ export function QueueDesk() {
           )}
         </div>
 
-        {/* Service Queue Filter */}
+        {/* Assigned Service Queue */}
         <div className="space-y-1.5 min-w-0 w-full">
           <label className="text-xs font-bold text-gray-700 block">
-            Target Service Queue Filter
+            Assigned Service Queue
           </label>
           <select
             value={selectedServiceId}
@@ -606,7 +626,6 @@ export function QueueDesk() {
             disabled={isActionPending}
             className="w-full min-w-0 h-9 px-3 py-1.5 text-xs border border-gray-300 rounded-xl bg-white font-medium text-gray-800 outline-none hover:border-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-colors disabled:opacity-50 disabled:bg-gray-100 disabled:cursor-not-allowed cursor-pointer truncate"
           >
-            <option value="">All Services (Global FIFO & Priority)</option>
             {services.map((s) => (
               <option key={s.id} value={s.id}>
                 [{s.prefix}] {s.name} ({s.code})
@@ -614,9 +633,9 @@ export function QueueDesk() {
             ))}
           </select>
           <p className="text-[11px] text-gray-500">
-            {selectedServiceId
-              ? 'Desk will prioritize tickets issued for the selected service.'
-              : 'Desk will pull from any waiting service queue based on priority & issuance order.'}
+            {selectedService
+              ? `Counter #${selectedCounter?.counterNumber || '-'} is assigned to the ${selectedService.name} queue.`
+              : 'Select the service queue associated with this desk.'}
           </p>
         </div>
       </div>
@@ -668,14 +687,22 @@ export function QueueDesk() {
 
             {/* Active Ticket Card States */}
             {activeTicket ? (
-              <div className="p-6 bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-950 text-white rounded-2xl shadow-sm space-y-5">
-                <div className="flex items-center justify-between text-xs text-blue-200 border-b border-white/10 pb-3">
-                  <span className="uppercase font-semibold tracking-wider text-[10px]">
-                    {activeTicket.status === TicketStatus.CALLED ? 'Ticket Called to Desk' : 'Service in Progress'}
-                  </span>
-                  <span className="px-2 py-0.5 rounded bg-white/10 font-mono text-[11px]">
-                    Priority: {activeTicket.priority}
-                  </span>
+              <div className="p-6 bg-slate-900 text-white rounded-2xl shadow-sm space-y-5 border border-slate-800">
+                <div className="flex items-center justify-between text-xs text-slate-300 border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="uppercase font-bold tracking-wider text-[10px] text-slate-300">
+                      {activeTicket.status === TicketStatus.CALLED ? 'Token Summoned to Desk' : 'Service in Progress'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-slate-400 font-mono">
+                      Issued: {activeTicket.issuedAt ? new Date(activeTicket.issuedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-slate-800 font-mono text-[11px] text-slate-300 border border-slate-700">
+                      Priority: {activeTicket.priority}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Big Token Number Hero */}
@@ -726,7 +753,7 @@ export function QueueDesk() {
                         type="button"
                         onClick={handleStartServing}
                         disabled={isActionPending}
-                        className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                       >
                         {isActionPending && actionType === 'serve' ? (
                           <>
@@ -740,35 +767,90 @@ export function QueueDesk() {
                         )}
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={handleSkipTicket}
-                        disabled={isActionPending}
-                        className="px-4 py-3 bg-white/10 hover:bg-red-600/80 text-white rounded-xl text-xs font-bold transition border border-white/20 disabled:opacity-50"
-                      >
-                        {isActionPending && actionType === 'skip' ? 'Skipping...' : '✕ Mark No-Show'}
-                      </button>
+                      {!showSkipConfirm ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowSkipConfirm(true)}
+                          disabled={isActionPending}
+                          className="px-4 py-3 bg-slate-800 text-rose-300 border border-slate-700 hover:bg-rose-900/40 hover:text-white rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer"
+                        >
+                          <span>✕ Mark No-Show</span>
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-2 p-1.5 bg-slate-800 rounded-xl border border-rose-500/40">
+                          <span className="text-xs text-rose-300 font-semibold px-1">Confirm?</span>
+                          <button
+                            type="button"
+                            onClick={handleSkipTicket}
+                            disabled={isActionPending}
+                            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition disabled:opacity-50 cursor-pointer"
+                          >
+                            {isActionPending && actionType === 'skip' ? 'Skipping...' : 'Yes, Skip'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowSkipConfirm(false)}
+                            disabled={isActionPending}
+                            className="px-2.5 py-1.5 text-xs text-slate-300 hover:text-white rounded-lg hover:bg-slate-700 transition cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
                     </>
                   )}
 
                   {activeTicket.status === TicketStatus.SERVING && (
-                    <button
-                      type="button"
-                      onClick={handleCompleteService}
-                      disabled={isActionPending}
-                      className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      {isActionPending && actionType === 'complete' ? (
-                        <>
-                          <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          <span>Completing Service...</span>
-                        </>
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleCompleteService}
+                        disabled={isActionPending}
+                        className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                      >
+                        {isActionPending && actionType === 'complete' ? (
+                          <>
+                            <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <span>Completing Service...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>✓ Complete Service Session</span>
+                          </>
+                        )}
+                      </button>
+
+                      {!showSkipConfirm ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowSkipConfirm(true)}
+                          disabled={isActionPending}
+                          className="px-4 py-3 bg-slate-800 text-rose-300 border border-slate-700 hover:bg-rose-900/40 hover:text-white rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer"
+                        >
+                          <span>✕ Cancel / Skip</span>
+                        </button>
                       ) : (
-                        <>
-                          <span>✓ Complete Service</span>
-                        </>
+                        <div className="flex items-center gap-2 p-1.5 bg-slate-800 rounded-xl border border-rose-500/40">
+                          <span className="text-xs text-rose-300 font-semibold px-1">Confirm?</span>
+                          <button
+                            type="button"
+                            onClick={handleSkipTicket}
+                            disabled={isActionPending}
+                            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition disabled:opacity-50 cursor-pointer"
+                          >
+                            {isActionPending && actionType === 'skip' ? 'Cancelling...' : 'Yes, Skip'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowSkipConfirm(false)}
+                            disabled={isActionPending}
+                            className="px-2.5 py-1.5 text-xs text-slate-300 hover:text-white rounded-lg hover:bg-slate-700 transition cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       )}
-                    </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -789,16 +871,16 @@ export function QueueDesk() {
                   type="button"
                   onClick={handleCallNext}
                   disabled={isActionPending || !hasActiveSession}
-                  className="w-full sm:w-auto px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isActionPending && actionType === 'callNext' ? (
                     <>
                       <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Calling Next...</span>
+                      <span>Calling Next Citizen...</span>
                     </>
                   ) : (
                     <>
-                      <span>⏭ Call Next Ticket</span>
+                      <span>⏭ Call Next Citizen</span>
                     </>
                   )}
                 </button>

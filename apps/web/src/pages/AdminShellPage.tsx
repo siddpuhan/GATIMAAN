@@ -1,190 +1,207 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
+import { UserRole } from '@gatimaan/shared';
+import { AdminSidebar } from '../components/admin/AdminSidebar.js';
+import { AdminTopHeader } from '../components/admin/AdminTopHeader.js';
+import { AdminOverviewPage } from './AdminOverviewPage.js';
+import { QueueDesk } from '../components/admin/QueueDesk.js';
 import { ServicesManagement } from '../components/admin/ServicesManagement.js';
 import { CountersManagement } from '../components/admin/CountersManagement.js';
-import { QueueDesk } from '../components/admin/QueueDesk.js';
-import { Badge } from '../components/ui/Badge.js';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from '../components/ui/Card.js';
+import { AdminPlaceholderPage } from './AdminPlaceholderPage.js';
+
+interface RouteMeta {
+  title: string;
+  description: string;
+}
+
+const ROUTE_META: Record<string, RouteMeta> = {
+  '/admin': {
+    title: 'Center Command Overview',
+    description: 'State of the center telemetry, active desks, and live queue snapshots',
+  },
+  '/admin/queue': {
+    title: 'Queue Desk Cockpit',
+    description: 'Operator desk workspace, ticket summoning, and live citizen processing',
+  },
+  '/admin/services': {
+    title: 'Services Management',
+    description: 'Configure citizen facilitation services, prefixes, and average durations',
+  },
+  '/admin/counters': {
+    title: 'Counters & Physical Desks',
+    description: 'Manage physical service desks, operator sessions, and desk assignments',
+  },
+  '/admin/footfall': {
+    title: 'Footfall Intelligence',
+    description: 'Hourly citizen arrival patterns, congestion tracking, and volume logs',
+  },
+  '/admin/analytics': {
+    title: 'Center SLA Analytics',
+    description: 'Department service times, operator efficiency, and throughput benchmarks',
+  },
+  '/admin/predictions': {
+    title: 'Predictive Demand Engine',
+    description: 'Statistical demand forecasting and proactive counter staffing recommendations',
+  },
+  '/admin/notifications': {
+    title: 'System Notifications',
+    description: 'Citizen SMS dispatch logs, operator alerts, and center announcements',
+  },
+  '/admin/settings': {
+    title: 'Center & System Settings',
+    description: 'Operational hours, security policies, and administrative preferences',
+  },
+};
 
 export function AdminShellPage() {
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const location = useLocation();
   const { user } = useUser();
-  const [activeTab, setActiveTab] = useState<
-    'queue' | 'services' | 'counters' | 'identity'
-  >('queue');
+
+  const rawRole = (user?.publicMetadata as { role?: string })?.role;
+  const isOperator = rawRole?.toUpperCase() === UserRole.OPERATOR;
+
+  const currentMeta = ROUTE_META[location.pathname] || {
+    title: isOperator ? 'Queue Desk Cockpit' : 'Admin Control Center',
+    description: isOperator
+      ? 'Operator desk workspace and live citizen processing'
+      : 'GATIMAAN Government Queue Management System',
+  };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      {/* Admin Shell Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-3">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Link
-              to="/"
-              className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition inline-flex items-center gap-1"
-            >
-              ← Citizen Portal
-            </Link>
+    <div className="flex-1 flex w-full min-w-0 bg-[#D6CCC2] overflow-hidden">
+      {/* 1. Collapsible Admin / Operator Navigation Sidebar */}
+      <AdminSidebar
+        isOpen={mobileSidebarOpen}
+        onCloseMobile={() => setMobileSidebarOpen(false)}
+      />
 
-            <span className="text-xs text-slate-300">/</span>
+      {/* 2. Main Admin Work Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <AdminTopHeader
+          title={currentMeta.title}
+          description={currentMeta.description}
+          onToggleMobileSidebar={() => setMobileSidebarOpen((prev) => !prev)}
+        />
 
-            <span className="text-xs text-slate-700 font-bold">
-              Admin Portal
-            </span>
-          </div>
-
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Admin Control Center
-          </h1>
-
-          <p className="text-xs text-slate-500">
-            Department configuration, physical desk management, and operator
-            session oversight
-          </p>
+        {/* Routed Subpage Content */}
+        <div className="flex-1 p-4 sm:p-6 lg:p-7 overflow-y-auto min-w-0">
+          <Routes>
+            <Route
+              index
+              element={isOperator ? <Navigate to="/admin/queue" replace /> : <AdminOverviewPage />}
+            />
+            <Route path="queue" element={<QueueDesk />} />
+            <Route
+              path="services"
+              element={isOperator ? <Navigate to="/admin/queue" replace /> : <ServicesManagement />}
+            />
+            <Route
+              path="counters"
+              element={isOperator ? <Navigate to="/admin/queue" replace /> : <CountersManagement />}
+            />
+            <Route
+              path="footfall"
+              element={
+                isOperator ? (
+                  <Navigate to="/admin/queue" replace />
+                ) : (
+                  <AdminPlaceholderPage
+                    title="Footfall Intelligence"
+                    category="INSIGHT"
+                    description="Real-time citizen arrival tracking, peak traffic volume analysis, and historical footfall heatmaps for Tehsil and Collectorate centers."
+                    upcomingPhase="Phase 2 Analytics"
+                    icon="👥"
+                  />
+                )
+              }
+            />
+            <Route
+              path="analytics"
+              element={
+                isOperator ? (
+                  <Navigate to="/admin/queue" replace />
+                ) : (
+                  <AdminPlaceholderPage
+                    title="Queue & SLA Analytics"
+                    category="INSIGHT"
+                    description="Detailed department throughput logs, operator resolution times, wait-time SLA compliance, and center performance dashboards."
+                    upcomingPhase="Phase 2 Analytics"
+                    icon="📈"
+                  />
+                )
+              }
+            />
+            <Route
+              path="predictions"
+              element={
+                isOperator ? (
+                  <Navigate to="/admin/queue" replace />
+                ) : (
+                  <AdminPlaceholderPage
+                    title="Predictive Demand Engine"
+                    category="INSIGHT"
+                    description="Statistical demand forecasting models predicting expected rush hours, arrival rates, and proactive counter staffing recommendations."
+                    upcomingPhase="Phase 4 Demand Insights"
+                    icon="🔮"
+                  />
+                )
+              }
+            />
+            <Route
+              path="notifications"
+              element={
+                isOperator ? (
+                  <Navigate to="/admin/queue" replace />
+                ) : (
+                  <AdminPlaceholderPage
+                    title="Notification Center"
+                    category="SYSTEM"
+                    description="Real-time citizen SMS delivery logs, counter summon alerts, emergency broadcast notices, and operator notifications."
+                    upcomingPhase="Phase 3 System"
+                    icon="🔔"
+                  />
+                )
+              }
+            />
+            <Route
+              path="settings"
+              element={
+                isOperator ? (
+                  <Navigate to="/admin/queue" replace />
+                ) : (
+                  <AdminPlaceholderPage
+                    title="Center & System Settings"
+                    category="SYSTEM"
+                    description="Center working hours configuration, service prefix masks, role-based operator permissions, and database backup controls."
+                    upcomingPhase="Phase 3 System"
+                    icon="⚙️"
+                  />
+                )
+              }
+            />
+            <Route
+              path="*"
+              element={<Navigate to={isOperator ? '/admin/queue' : '/admin'} replace />}
+            />
+          </Routes>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Badge variant="navy" size="md">
-            ADMIN AUTHORIZED
-          </Badge>
-        </div>
-      </div>
-
-      {/* Unified Admin Navigation Bar */}
-      <div className="flex border-b border-slate-200 text-xs font-semibold overflow-x-auto gap-1">
-        <Link
-          to="/admin/queue"
-          className="pb-3 px-4 border-b-2 border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300 transition inline-flex items-center gap-1.5"
-        >
-          <span>Queue Operations</span>
-          <span className="text-[10px] text-slate-400">↗</span>
-        </Link>
-
-        <button
-          onClick={() => setActiveTab('queue')}
-          className={`pb-2.5 px-4 -mb-px border-b-2 transition ${activeTab === 'queue'
-            ? 'border-blue-600 text-blue-600 font-semibold'
-            : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-        >
-          Queue Desk
-        </button>
-
-        <button
-          onClick={() => setActiveTab('services')}
-          className={`pb-3 px-4 border-b-2 transition cursor-pointer ${activeTab === 'services'
-            ? 'border-slate-900 text-slate-900 font-bold'
-            : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-        >
-          Services Management
-        </button>
-
-        <button
-          onClick={() => setActiveTab('counters')}
-          className={`pb-3 px-4 border-b-2 transition cursor-pointer ${activeTab === 'counters'
-            ? 'border-slate-900 text-slate-900 font-bold'
-            : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-        >
-          Counters & Desks
-        </button>
-
-        <button
-          onClick={() => setActiveTab('identity')}
-          className={`pb-3 px-4 border-b-2 transition cursor-pointer ${activeTab === 'identity'
-            ? 'border-slate-900 text-slate-900 font-bold'
-            : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-        >
-          Session Info
-        </button>
-      </div>
-
-      {/* Tab Content */}
-      <div className="pt-2">
-        {activeTab === 'queue' && <QueueDesk />}
-
-        {activeTab === 'services' && <ServicesManagement />}
-
-        {activeTab === 'counters' && <CountersManagement />}
-
-        {activeTab === 'identity' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Clerk Authentication Identity</CardTitle>
-                <CardDescription>
-                  Verified operator session claims
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="space-y-2 text-xs text-slate-700">
-                <p>
-                  <strong>User ID:</strong>{' '}
-                  <span className="font-mono text-slate-900">
-                    {user?.id || '—'}
-                  </span>
-                </p>
-
-                <p>
-                  <strong>Email:</strong>{' '}
-                  <span className="text-slate-900">
-                    {user?.primaryEmailAddress?.emailAddress || '—'}
-                  </span>
-                </p>
-
-                <p>
-                  <strong>Name:</strong>{' '}
-                  <span className="text-slate-900">
-                    {user?.fullName || 'Operator'}
-                  </span>
-                </p>
-
-                <div className="pt-2 border-t border-slate-100">
-                  <span className="text-[11px] text-slate-400 uppercase font-semibold block mb-1">
-                    Public Metadata
-                  </span>
-
-                  <pre className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-[11px] font-mono text-slate-700 overflow-x-auto">
-                    {JSON.stringify(user?.publicMetadata, null, 2)}
-                  </pre>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Role-Based Access Control (RBAC)</CardTitle>
-                <CardDescription>
-                  Security verification status
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="space-y-3 text-xs text-slate-700">
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-emerald-900 font-semibold">
-                  <span>✓</span>
-                  <span>
-                    Administrative Protected Route Access Granted
-                  </span>
-                </div>
-
-                <p className="text-slate-600 leading-relaxed text-[11px]">
-                  Your authenticated session has been verified with role{' '}
-                  <strong className="font-mono">ADMIN</strong>. You have
-                  permissions to configure department services, open/close
-                  counter sessions, and operate live queues.
-                </p>
-              </CardContent>
-            </Card>
+        {/* Compact Admin Workspace Footer */}
+        <footer className="bg-slate-900 text-slate-400 py-2.5 px-4 sm:px-6 text-[11px] border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-slate-200">GATIMAAN</span>
+            <span className="text-slate-600">•</span>
+            <span>MP Online Smart Citizen Queue</span>
+            <span className="text-slate-600">•</span>
+            <span>Government of Madhya Pradesh</span>
           </div>
-        )}
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-slate-300 font-medium">System Status: Operational</span>
+          </div>
+        </footer>
       </div>
     </div>
   );

@@ -528,4 +528,38 @@ describe('Queue Engine & Ticket Lifecycle Integration Tests', () => {
       assert.equal(res2.body.ticket.counterId, counterId2);
     });
   });
+
+  after(async () => {
+    // Clean up test tickets, counter sessions, counters, and services
+    await prisma.ticket.deleteMany({
+      where: {
+        OR: [
+          { serviceId: activeServiceId },
+          { serviceId: inactiveServiceId },
+          { counterId: counterId1 },
+          { counterId: counterId2 },
+        ],
+      },
+    });
+    await prisma.counterSession.deleteMany({
+      where: {
+        OR: [{ counterId: counterId1 }, { counterId: counterId2 }],
+      },
+    });
+    await prisma.counter.deleteMany({
+      where: {
+        id: { in: [counterId1, counterId2] },
+      },
+    });
+    await prisma.service.deleteMany({
+      where: {
+        id: { in: [activeServiceId, inactiveServiceId] },
+      },
+    });
+    await prisma.user.deleteMany({
+      where: {
+        clerkUserId: { in: [adminClerkId1, adminClerkId2, custClerkId] },
+      },
+    });
+  });
 });

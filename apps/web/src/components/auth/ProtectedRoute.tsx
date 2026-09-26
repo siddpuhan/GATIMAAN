@@ -27,7 +27,11 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
         {(() => {
           const rawRole = (user?.publicMetadata as { role?: string })?.role;
           const userRole =
-            rawRole?.toUpperCase() === UserRole.ADMIN ? UserRole.ADMIN : UserRole.CUSTOMER;
+            rawRole?.toUpperCase() === UserRole.ADMIN
+              ? UserRole.ADMIN
+              : rawRole?.toUpperCase() === UserRole.OPERATOR
+              ? UserRole.OPERATOR
+              : UserRole.CUSTOMER;
 
           if (allowedRoles && !allowedRoles.includes(userRole)) {
             return (
@@ -43,8 +47,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Your authenticated account has role{' '}
                       <strong className="font-mono text-slate-900 font-bold">{userRole}</strong>.
-                      This administrative queue operations console requires{' '}
-                      <strong className="font-mono text-slate-900 font-bold">ADMIN</strong> access privileges.
+                      This section requires authorized access privileges.
                     </p>
                     <div className="pt-2">
                       <Link

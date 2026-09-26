@@ -10,6 +10,7 @@ export interface HealthCheckResponse {
 // Canonical User Roles (§1)
 export enum UserRole {
   CUSTOMER = 'CUSTOMER',
+  OPERATOR = 'OPERATOR',
   ADMIN = 'ADMIN',
 }
 
@@ -316,6 +317,25 @@ export interface SubscriptionAck {
   success: boolean;
   room: string;
   message?: string;
+}
+
+export interface FootfallSummaryDTO {
+  currentOccupancy: number;
+  todayCountIn: number;
+  todayCountOut: number;
+  peakOccupancyToday: number;
+  lastEventAt: string;
+}
+
+export interface PredictionSummaryDTO {
+  serviceId: string;
+  serviceName: string;
+  predictedWaitSeconds: number;
+  predictedFootfall: number;
+  waitingCount?: number;
+  forecastedFootfallNextHour?: number;
+  demandLevel: DemandLevel;
+  recommendation?: string;
 }
 
 

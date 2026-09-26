@@ -8,7 +8,6 @@ import { TicketTrackingPage } from './pages/TicketTrackingPage.js';
 import { SignInPage } from './pages/SignInPage.js';
 import { SignUpPage } from './pages/SignUpPage.js';
 import { AdminShellPage } from './pages/AdminShellPage.js';
-import { AdminQueuePage } from './pages/AdminQueuePage.js';
 import { getActiveTicketId } from './lib/ticketStorage.js';
 
 export function App() {
@@ -22,7 +21,11 @@ export function App() {
 
   const rawRole = (user?.publicMetadata as { role?: string })?.role;
   const currentRole =
-    rawRole?.toUpperCase() === UserRole.ADMIN ? UserRole.ADMIN : UserRole.CUSTOMER;
+    rawRole?.toUpperCase() === UserRole.ADMIN
+      ? UserRole.ADMIN
+      : rawRole?.toUpperCase() === UserRole.OPERATOR
+      ? UserRole.OPERATOR
+      : UserRole.CUSTOMER;
 
   useEffect(() => {
     setActiveTicketId(getActiveTicketId());
@@ -182,18 +185,18 @@ export function App() {
                 </Link>
               )}
 
-              {/* Admin Portal Entry exclusively for authenticated Admins */}
-              {currentRole === UserRole.ADMIN && (
+              {/* Admin / Operator Portal Entry */}
+              {(currentRole === UserRole.ADMIN || currentRole === UserRole.OPERATOR) && (
                 <SignedIn>
                   <Link
-                    to="/admin"
+                    to={currentRole === UserRole.OPERATOR ? '/admin/queue' : '/admin'}
                     className={`px-2.5 py-1 rounded-lg border text-xs font-bold transition inline-flex items-center gap-1.5 ${
                       isAdminRoute
                         ? 'bg-slate-900 text-white border-slate-900'
                         : 'bg-slate-50 text-slate-800 border-slate-300 hover:bg-slate-100'
                     }`}
                   >
-                    <span>Admin Portal</span>
+                    <span>{currentRole === UserRole.OPERATOR ? 'Queue Desk' : 'Admin Portal'}</span>
                   </Link>
                 </SignedIn>
               )}
@@ -218,7 +221,15 @@ export function App() {
       </header>
 
       {/* 4. Main Landmark Content Area */}
-      <main id="main-content" tabIndex={-1} className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:py-8 focus:outline-none">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className={
+          isAdminRoute
+            ? 'flex-1 flex flex-col w-full min-w-0 focus:outline-none'
+            : 'flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:py-8 focus:outline-none'
+        }
+      >
         <Routes>
           <Route path="/" element={<CustomerPortalPage />} />
           <Route path="/services" element={<CustomerPortalPage />} />
@@ -227,77 +238,71 @@ export function App() {
           <Route path="/sign-in/*" element={<SignInPage />} />
           <Route path="/sign-up/*" element={<SignUpPage />} />
           <Route
-            path="/admin"
+            path="/admin/*"
             element={
-              <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+              <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.OPERATOR]}>
                 <AdminShellPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/queue"
-            element={
-              <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
-                <AdminQueuePage />
               </ProtectedRoute>
             }
           />
         </Routes>
       </main>
 
-      {/* 5. Standard Official Government Service Footer */}
-      <footer className="border-t border-slate-200 bg-white py-8 px-4 sm:px-6 text-xs text-slate-600 mt-auto">
-        <div className="max-w-6xl mx-auto space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pb-6 border-b border-slate-100">
-            <div>
-              <h4 className="font-bold text-slate-900 mb-1.5">Official Digital Service</h4>
-              <p className="text-slate-500 text-[11px] leading-relaxed">
-                This is the official digital citizen facilitation queue management service (GATIMAAN),
-                operated under MP Online for transparent, real-time citizen service delivery.
-              </p>
+      {/* 5. Standard Official Government Service Footer (Citizen / Public Portal Only) */}
+      {!isAdminRoute && (
+        <footer className="border-t border-slate-200 bg-white py-8 px-4 sm:px-6 text-xs text-slate-600 mt-auto">
+          <div className="max-w-6xl mx-auto space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pb-6 border-b border-slate-100">
+              <div>
+                <h4 className="font-bold text-slate-900 mb-1.5">Official Digital Service</h4>
+                <p className="text-slate-500 text-[11px] leading-relaxed">
+                  This is the official digital citizen facilitation queue management service (GATIMAAN),
+                  operated under MP Online for transparent, real-time citizen service delivery.
+                </p>
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900 mb-1.5">Citizen Helpline & Support</h4>
+                <ul className="text-slate-500 text-[11px] space-y-1">
+                  <li>Toll Free Citizen Helpline: 1800-233-0194</li>
+                  <li>Email Support: support.gatimaan@mponline.gov.in</li>
+                  <li>Operational Hours: Monday – Saturday (9:00 AM – 6:00 PM IST)</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900 mb-1.5">Department & Content Ownership</h4>
+                <p className="text-slate-500 text-[11px] leading-relaxed">
+                  Content owned and maintained by Public Service Management Department, Government of Madhya Pradesh.
+                </p>
+                <p className="text-slate-400 text-[10px] mt-1.5">
+                  Last Updated: 25 September 2026
+                </p>
+              </div>
             </div>
-            <div>
-              <h4 className="font-bold text-slate-900 mb-1.5">Citizen Helpline & Support</h4>
-              <ul className="text-slate-500 text-[11px] space-y-1">
-                <li>Toll Free Citizen Helpline: 1800-233-0194</li>
-                <li>Email Support: support.gatimaan@mponline.gov.in</li>
-                <li>Operational Hours: Monday – Saturday (9:00 AM – 6:00 PM IST)</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold text-slate-900 mb-1.5">Department & Content Ownership</h4>
-              <p className="text-slate-500 text-[11px] leading-relaxed">
-                Content owned and maintained by Public Service Management Department, Government of Madhya Pradesh.
-              </p>
-              <p className="text-slate-400 text-[10px] mt-1.5">
-                Last Updated: 25 September 2026
-              </p>
-            </div>
-          </div>
 
-          {/* Standard Government Policy Links Row */}
-          <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-[11px] text-slate-500 pt-1">
-            <span className="hover:text-slate-800 cursor-pointer">Terms of Use</span>
-            <span className="text-slate-300">•</span>
-            <span className="hover:text-slate-800 cursor-pointer">Privacy Policy</span>
-            <span className="text-slate-300">•</span>
-            <span className="hover:text-slate-800 cursor-pointer">Hyperlinking Policy</span>
-            <span className="text-slate-300">•</span>
-            <span className="hover:text-slate-800 cursor-pointer">Accessibility Statement</span>
-            <span className="text-slate-300">•</span>
-            <span className="hover:text-slate-800 cursor-pointer">Sitemap</span>
-            <span className="text-slate-300">•</span>
-            <span className="hover:text-slate-800 cursor-pointer">Help & Grievances</span>
-          </div>
+            {/* Standard Government Policy Links Row */}
+            <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-[11px] text-slate-500 pt-1">
+              <span className="hover:text-slate-800 cursor-pointer">Terms of Use</span>
+              <span className="text-slate-300">•</span>
+              <span className="hover:text-slate-800 cursor-pointer">Privacy Policy</span>
+              <span className="text-slate-300">•</span>
+              <span className="hover:text-slate-800 cursor-pointer">Hyperlinking Policy</span>
+              <span className="text-slate-300">•</span>
+              <span className="hover:text-slate-800 cursor-pointer">Accessibility Statement</span>
+              <span className="text-slate-300">•</span>
+              <span className="hover:text-slate-800 cursor-pointer">Sitemap</span>
+              <span className="text-slate-300">•</span>
+              <span className="hover:text-slate-800 cursor-pointer">Help & Grievances</span>
+            </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-slate-500 text-[11px] pt-2 border-t border-slate-100">
-            <p>© {new Date().getFullYear()} Government of Madhya Pradesh. All rights reserved.</p>
-            <p className="text-slate-400 font-mono text-[10px]">
-              GATIMAAN MP Online Queue Management System
-            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-slate-500 text-[11px] pt-2 border-t border-slate-100">
+              <p>© {new Date().getFullYear()} Government of Madhya Pradesh. All rights reserved.</p>
+              <p className="text-slate-400 font-mono text-[10px]">
+                GATIMAAN MP Online Queue Management System
+              </p>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }

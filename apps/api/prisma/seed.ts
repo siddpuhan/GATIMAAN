@@ -122,16 +122,19 @@ async function main() {
     seededServices.push(service);
   }
 
-  // Deactivate any legacy/demo services outside the canonical 10
+  // Clean up non-canonical test services, tickets, and predictions
   const canonicalCodes = servicesData.map((s) => s.code);
-  await prisma.service.updateMany({
-    where: {
-      code: { notIn: canonicalCodes },
-    },
-    data: {
-      isActive: false,
-    },
+  const nonCanonicalServices = await prisma.service.findMany({
+    where: { code: { notIn: canonicalCodes } },
+    select: { id: true },
   });
+  if (nonCanonicalServices.length > 0) {
+    const nonCanonicalIds = nonCanonicalServices.map((s) => s.id);
+    await prisma.ticket.deleteMany({ where: { serviceId: { in: nonCanonicalIds } } });
+    await prisma.predictionSnapshot.deleteMany({ where: { serviceId: { in: nonCanonicalIds } } });
+    await prisma.service.deleteMany({ where: { id: { in: nonCanonicalIds } } });
+    console.log(`[Seed] Purged ${nonCanonicalServices.length} non-canonical test services.`);
+  }
 
   console.log(`[Seed] Seeded ${seededServices.length} canonical services.`);
 
@@ -144,6 +147,20 @@ async function main() {
     { counterNumber: 5, name: 'Aadhaar Services', isActive: true },
     { counterNumber: 6, name: 'Payments & Utility Services', isActive: true },
   ];
+
+  // Purge test counters > 6
+  const canonicalCounterNumbers = countersData.map((c) => c.counterNumber);
+  const nonCanonicalCounters = await prisma.counter.findMany({
+    where: { counterNumber: { notIn: canonicalCounterNumbers } },
+    select: { id: true },
+  });
+  if (nonCanonicalCounters.length > 0) {
+    const nonCanonicalCounterIds = nonCanonicalCounters.map((c) => c.id);
+    await prisma.counterSession.deleteMany({ where: { counterId: { in: nonCanonicalCounterIds } } });
+    await prisma.ticket.deleteMany({ where: { counterId: { in: nonCanonicalCounterIds } } });
+    await prisma.counter.deleteMany({ where: { id: { in: nonCanonicalCounterIds } } });
+    console.log(`[Seed] Purged ${nonCanonicalCounters.length} non-canonical test counters.`);
+  }
 
   const seededCounters = [];
   for (const c of countersData) {

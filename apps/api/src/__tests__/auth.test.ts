@@ -27,7 +27,21 @@ describe('Auth & RBAC Middleware Unit Tests', () => {
     );
   });
 
-  it('should fallback safely to UserRole.CUSTOMER when metadata is missing or not ADMIN', () => {
+  it('should extract UserRole.OPERATOR when publicMetadata role is OPERATOR', () => {
+    const authWithMetadata = {
+      userId: 'user_operator_123',
+      sessionClaims: {
+        metadata: { role: 'OPERATOR' },
+      },
+    };
+
+    assert.equal(
+      extractRoleFromAuth(authWithMetadata as unknown as Request['auth']),
+      UserRole.OPERATOR
+    );
+  });
+
+  it('should fallback safely to UserRole.CUSTOMER when metadata is missing or not ADMIN/OPERATOR', () => {
     const authNoMetadata = {
       userId: 'user_cust_123',
       sessionClaims: {},
@@ -58,44 +72,95 @@ describe('Auth & RBAC Middleware Unit Tests', () => {
     assert.equal(response.body.error, 'Unauthorized');
   });
 
-  it('should block non-admin users from admin routes with 403 Forbidden', async () => {
-    // Controlled test app with simulated customer auth context
-    const testApp = express();
-    testApp.use((req: Request, _res: Response, next) => {
+  it('should block non-admin users (including OPERATOR) from ADMIN-only routes with 403 Forbidden', async () => {
+    // 1. Customer blocked from ADMIN-only route
+    const customerApp = express();
+    customerApp.use((req: Request, _res: Response, next) => {
       req.auth = () => ({
         userId: 'user_customer_test',
         sessionClaims: { metadata: { role: 'CUSTOMER' } },
       });
       next();
     });
-    testApp.get('/admin-test', requireAuth, requireRole(UserRole.ADMIN), (_req, res) => {
+    customerApp.get('/admin-only', requireAuth, requireRole(UserRole.ADMIN), (_req, res) => {
       res.json({ ok: true });
     });
 
-    const response = await request(testApp).get('/admin-test');
+    const custRes = await request(customerApp).get('/admin-only');
+    assert.equal(custRes.status, 403);
+    assert.equal(custRes.body.error, 'Forbidden');
 
-    assert.equal(response.status, 403);
-    assert.equal(response.body.error, 'Forbidden');
+    // 2. Operator blocked from ADMIN-only route
+    const operatorApp = express();
+    operatorApp.use((req: Request, _res: Response, next) => {
+      req.auth = () => ({
+        userId: 'user_operator_test',
+        sessionClaims: { metadata: { role: 'OPERATOR' } },
+      });
+      next();
+    });
+    operatorApp.get('/admin-only', requireAuth, requireRole(UserRole.ADMIN), (_req, res) => {
+      res.json({ ok: true });
+    });
+
+    const opRes = await request(operatorApp).get('/admin-only');
+    assert.equal(opRes.status, 403);
+    assert.equal(opRes.body.error, 'Forbidden');
   });
 
-  it('should allow admin users through requireRole(UserRole.ADMIN)', async () => {
-    // Controlled test app with simulated admin auth context
-    const testApp = express();
-    testApp.use((req: Request, _res: Response, next) => {
+  it('should allow both OPERATOR and ADMIN on staff desk routes, blocking CUSTOMER', async () => {
+    const staffGuards = [requireAuth, requireRole([UserRole.ADMIN, UserRole.OPERATOR])];
+
+    // 1. Operator allowed on staff desk route
+    const operatorApp = express();
+    operatorApp.use((req: Request, _res: Response, next) => {
+      req.auth = () => ({
+        userId: 'user_operator_test',
+        sessionClaims: { metadata: { role: 'OPERATOR' } },
+      });
+      next();
+    });
+    operatorApp.get('/staff-desk', ...staffGuards, (_req, res) => {
+      res.json({ success: true, role: 'OPERATOR' });
+    });
+
+    const opRes = await request(operatorApp).get('/staff-desk');
+    assert.equal(opRes.status, 200);
+    assert.equal(opRes.body.success, true);
+
+    // 2. Admin allowed on staff desk route
+    const adminApp = express();
+    adminApp.use((req: Request, _res: Response, next) => {
       req.auth = () => ({
         userId: 'user_admin_test',
         sessionClaims: { metadata: { role: 'ADMIN' } },
       });
       next();
     });
-    testApp.get('/admin-test', requireAuth, requireRole(UserRole.ADMIN), (_req, res) => {
-      res.json({ success: true, authorized: true });
+    adminApp.get('/staff-desk', ...staffGuards, (_req, res) => {
+      res.json({ success: true, role: 'ADMIN' });
     });
 
-    const response = await request(testApp).get('/admin-test');
+    const admRes = await request(adminApp).get('/staff-desk');
+    assert.equal(admRes.status, 200);
+    assert.equal(admRes.body.success, true);
 
-    assert.equal(response.status, 200);
-    assert.equal(response.body.authorized, true);
+    // 3. Customer blocked from staff desk route
+    const customerApp = express();
+    customerApp.use((req: Request, _res: Response, next) => {
+      req.auth = () => ({
+        userId: 'user_customer_test',
+        sessionClaims: { metadata: { role: 'CUSTOMER' } },
+      });
+      next();
+    });
+    customerApp.get('/staff-desk', ...staffGuards, (_req, res) => {
+      res.json({ success: true });
+    });
+
+    const custRes = await request(customerApp).get('/staff-desk');
+    assert.equal(custRes.status, 403);
+    assert.equal(custRes.body.error, 'Forbidden');
   });
 });
 

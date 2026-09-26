@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   REALTIME_EVENTS,
   REALTIME_TOPICS,
@@ -131,3 +131,31 @@ export function usePredictionSubscription(
     };
   }, [onUpdate]);
 }
+
+/**
+ * Returns the current Socket.IO connection status.
+ */
+export function useSocketStatus(): boolean {
+  const socket = getSocket();
+  const [connected, setConnected] = useState<boolean>(socket.connected);
+
+  useEffect(() => {
+    const onConnect = () => setConnected(true);
+    const onDisconnect = () => setConnected(false);
+
+    if (socket.connected !== connected) {
+      setConnected(socket.connected);
+    }
+
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+
+    return () => {
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+    };
+  }, [socket, connected]);
+
+  return connected;
+}
+

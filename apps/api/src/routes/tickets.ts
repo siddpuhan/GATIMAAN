@@ -11,8 +11,8 @@ import { BadRequestError } from '../errors/appErrors.js';
 
 export const ticketsRouter = Router();
 
-// Guard for admin desk operations
-const adminDeskGuard = [requireAuth, requireRole(UserRole.ADMIN), syncUserMiddleware];
+// Guard for desk operations (ADMIN and OPERATOR)
+const staffDeskGuard = [requireAuth, requireRole([UserRole.ADMIN, UserRole.OPERATOR]), syncUserMiddleware];
 
 // POST /api/tickets/issue - Issue a new queue ticket (public / customer / kiosk)
 ticketsRouter.post(
@@ -61,7 +61,7 @@ ticketsRouter.get(
 // POST /api/tickets/call-next - Call next waiting ticket to counter
 ticketsRouter.post(
   '/api/tickets/call-next',
-  ...adminDeskGuard,
+  ...staffDeskGuard,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const operatorUserId = req.user?.id;
@@ -91,7 +91,7 @@ ticketsRouter.post(
 // POST /api/tickets/:id/serve - Start serving a called ticket
 ticketsRouter.post(
   '/api/tickets/:id/serve',
-  ...adminDeskGuard,
+  ...staffDeskGuard,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const operatorUserId = req.user?.id;
@@ -121,7 +121,7 @@ ticketsRouter.post(
 // POST /api/tickets/:id/complete - Complete service for ticket
 ticketsRouter.post(
   '/api/tickets/:id/complete',
-  ...adminDeskGuard,
+  ...staffDeskGuard,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const operatorUserId = req.user?.id;
@@ -151,7 +151,7 @@ ticketsRouter.post(
 // POST /api/tickets/:id/skip - Mark called ticket as no-show / skip
 ticketsRouter.post(
   '/api/tickets/:id/skip',
-  ...adminDeskGuard,
+  ...staffDeskGuard,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const operatorUserId = req.user?.id;
