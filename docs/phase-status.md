@@ -99,7 +99,20 @@ This document tracks the progress and verification status across all phases of t
   - [x] Admin endpoints: `GET /api/prediction/current`, `GET /api/prediction/snapshots`, `POST /api/prediction/recalculate`
   - [x] Realtime `prediction.updated` broadcasting to Socket.IO `'prediction'` room
   - [x] Zero external ML/LLM/Python dependencies (100% pure TypeScript)
-- [ ] **Phase 13: Admin Dashboard & Analytics / Heatmaps**
-- [ ] **Phase 14: Notification Service (SMS / WhatsApp / Push Alerts)**
-- [ ] **Phase 15: Security Hardening & Performance Optimization**
-- [ ] **Phase 16: Deployment, Monitoring & Production Readiness**
+
+## Citizen Portal UI/UX Rebuild (Phases U1–U5)
+
+- [x] **Phase U1: Citizen Design System + Information Architecture**
+  - [x] Citizen IA updated: Home / Services / Dashboard primary nav; no separate Track Token destination
+  - [x] `/ticket/:id` established as the single live-ticket destination (Phase U4 will rebuild the experience)
+  - [x] Legacy `/track` deep links redirect to `/dashboard` (backend lookup APIs untouched)
+  - [x] Reusable `CitizenHeader` / `CitizenFooter` extracted; Admin Portal entry remains ADMIN-only
+  - [x] Tailwind v4 `@theme` design tokens (color, typography, spacing, radius, motion)
+  - [x] Citizen primitives: `PageContainer`, `SectionHeader`, `StatusBadge`, `ServiceAvailabilityBadge`, `LiveIndicator`, `QueueMetric`, `InfoRow`
+  - [x] Read-only `useSocketConnection` hook + realtime state strategy (Live/Updating/Reconnecting/Unavailable)
+  - [x] Accessibility baseline: reduced-motion support, semantic landmarks, labeled statuses, focus states
+  - [x] Design-system documentation (`docs/citizen-ui-design-system.md`)
+- [ ] **Phase U2: Home Page Redesign**
+- [ ] **Phase U3: Services Page Redesign**
+- [ ] **Phase U4: Live Ticket / Queue Experience Redesign**
+- [ ] **Phase U5: Dashboard Redesign + Final Polish**

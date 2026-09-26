@@ -1,58 +1,82 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@clerk/clerk-react';
-import { CounterWithSessionDTO, CreateCounterInput, CounterDTO, CounterSessionDTO } from '@gatimaan/shared';
+import {
+  CounterWithSessionDTO,
+  CreateCounterInput,
+  CounterDTO,
+  CounterSessionDTO,
+} from '@gatimaan/shared';
+import { Badge } from '../ui/Badge.js';
+import { Button } from '../ui/Button.js';
+import { AlertBanner, LoadingState, EmptyState } from '../ui/FeedbackStates.js';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 export function CountersManagement() {
   const { getToken } = useAuth();
+
   const [counters, setCounters] = useState<CounterWithSessionDTO[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [actionPendingId, setActionPendingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingCounter, setEditingCounter] = useState<CounterWithSessionDTO | null>(null);
 
-  // Form state
   const [formData, setFormData] = useState<CreateCounterInput>({
     counterNumber: 1,
     name: '',
     isActive: true,
   });
 
-  const fetchCounters = async () => {
+  const fetchCounters = useCallback(async () => {
     try {
       setError(null);
       const token = await getToken();
-      const res = await fetch(`${API_BASE}/api/counters`, {
-        headers: {
-          Authorization: token ? `Bearer ${token}` : '',
-        },
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || 'Failed to fetch counters');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const data = await res.json();
+      const res = await fetch(`${API_BASE}/api/counters`, { headers });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to fetch counters list');
+      }
+
+      const data: CounterWithSessionDTO[] = await res.json();
       setCounters(data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error fetching counters');
     } finally {
       setInitialLoading(false);
     }
-  };
+  }, [getToken]);
 
   useEffect(() => {
     fetchCounters();
-  }, []);
+  }, [fetchCounters]);
+
+  useEffect(() => {
+    if (!showModal) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowModal(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [showModal]);
 
   const handleOpenCreate = () => {
     setEditingCounter(null);
-    const nextNumber = counters.length > 0 ? Math.max(...counters.map((c) => c.counterNumber)) + 1 : 1;
+    const nextNumber =
+      counters.length > 0 ? Math.max(...counters.map((c) => c.counterNumber)) + 1 : 1;
+
     setFormData({
       counterNumber: nextNumber,
       name: `Counter ${nextNumber}`,
@@ -73,49 +97,49 @@ export function CountersManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     try {
       setIsSaving(true);
       setError(null);
       setSuccessMsg(null);
+
       const token = await getToken();
       const url = editingCounter
         ? `${API_BASE}/api/counters/${editingCounter.id}`
         : `${API_BASE}/api/counters`;
       const method = editingCounter ? 'PATCH' : 'POST';
 
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: token ? `Bearer ${token}` : '',
-        },
+        headers,
         body: JSON.stringify(formData),
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         throw new Error(data.message || 'Failed to save counter');
       }
 
-      const savedCounter: CounterDTO = await res.json();
+      const saved: CounterWithSessionDTO = await res.json();
 
-      setCounters((prev) => {
-        if (editingCounter) {
-          return prev.map((c) =>
-            c.id === savedCounter.id
-              ? { ...c, counterNumber: savedCounter.counterNumber, name: savedCounter.name, isActive: savedCounter.isActive }
-              : c
-          );
-        }
-        const newCounterWithSession: CounterWithSessionDTO = {
-          ...savedCounter,
-          currentSession: null,
-        };
-        return [...prev, newCounterWithSession].sort((a, b) => a.counterNumber - b.counterNumber);
-      });
+      if (editingCounter) {
+        setCounters((prev) =>
+          prev.map((c) => (c.id === saved.id ? { ...c, ...saved } : c))
+        );
+        setSuccessMsg(`Desk #${saved.counterNumber} updated successfully`);
+      } else {
+        setCounters((prev) => [...prev, { ...saved, currentSession: null }]);
+        setSuccessMsg(`Desk #${saved.counterNumber} created successfully`);
+      }
 
       setShowModal(false);
-      setSuccessMsg(editingCounter ? 'Counter updated successfully' : 'Counter created successfully');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error saving counter');
     } finally {
@@ -128,18 +152,25 @@ export function CountersManagement() {
       setActionPendingId(counter.id);
       setError(null);
       setSuccessMsg(null);
+
       const token = await getToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch(`${API_BASE}/api/counters/${counter.id}/status`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: token ? `Bearer ${token}` : '',
-        },
-        body: JSON.stringify({ isActive: !counter.isActive }),
+        headers,
+        body: JSON.stringify({
+          isActive: !counter.isActive,
+        }),
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         throw new Error(data.message || 'Failed to toggle status');
       }
 
@@ -148,7 +179,7 @@ export function CountersManagement() {
         prev.map((c) => (c.id === updated.id ? { ...c, isActive: updated.isActive } : c))
       );
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error toggling status');
+      setError(err instanceof Error ? err.message : 'Error toggling counter status');
     } finally {
       setActionPendingId(null);
     }
@@ -159,27 +190,31 @@ export function CountersManagement() {
       setActionPendingId(counter.id);
       setError(null);
       setSuccessMsg(null);
+
       const token = await getToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch(`${API_BASE}/api/counters/${counter.id}/open`, {
         method: 'POST',
-        headers: {
-          Authorization: token ? `Bearer ${token}` : '',
-        },
+        headers,
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || 'Failed to open counter');
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to open desk session');
       }
 
       const data: { session: CounterSessionDTO } = await res.json();
-      setSuccessMsg(`Counter ${counter.counterNumber} desk session opened`);
+      setSuccessMsg(`Desk #${counter.counterNumber} operator session opened successfully`);
 
       setCounters((prev) =>
         prev.map((c) => (c.id === counter.id ? { ...c, currentSession: data.session } : c))
       );
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error opening counter');
+      setError(err instanceof Error ? err.message : 'Error opening counter desk');
     } finally {
       setActionPendingId(null);
     }
@@ -190,158 +225,220 @@ export function CountersManagement() {
       setActionPendingId(counter.id);
       setError(null);
       setSuccessMsg(null);
+
       const token = await getToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch(`${API_BASE}/api/counters/${counter.id}/close`, {
         method: 'POST',
-        headers: {
-          Authorization: token ? `Bearer ${token}` : '',
-        },
+        headers,
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || 'Failed to close counter');
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to close counter desk session');
       }
 
-      setSuccessMsg(`Counter ${counter.counterNumber} desk session closed`);
-
+      setSuccessMsg(`Desk #${counter.counterNumber} session concluded`);
       setCounters((prev) =>
         prev.map((c) => (c.id === counter.id ? { ...c, currentSession: null } : c))
       );
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error closing counter');
+      setError(err instanceof Error ? err.message : 'Error closing counter desk');
     } finally {
       setActionPendingId(null);
     }
   };
 
+  const filteredCounters = counters.filter((c) => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      c.name.toLowerCase().includes(q) ||
+      c.counterNumber.toString().includes(q)
+    );
+  });
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      {/* Header & Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-800">Counters & Desks</h3>
-          <p className="text-xs text-gray-500">Manage physical service desks and active operator shifts</p>
+          <h2 className="text-lg font-bold text-slate-900 tracking-tight">Counters & Desks</h2>
+          <p className="text-xs text-slate-500">
+            Manage physical service counters and live operator desk shifts
+          </p>
         </div>
-        <button
-          onClick={handleOpenCreate}
-          className="px-3.5 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition shadow-xs"
-        >
-          + Add Counter
-        </button>
+
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search counters..."
+            className="px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-900 min-w-[200px]"
+          />
+
+          <Button
+            variant="primary"
+            size="md"
+            onClick={handleOpenCreate}
+            icon={<span>+</span>}
+          >
+            Add Counter
+          </Button>
+        </div>
       </div>
 
+      {/* Error / Success Feedback */}
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded text-xs text-red-700">
-          {error}
-        </div>
+        <AlertBanner
+          type="error"
+          title="Desk Error"
+          message={error}
+          onClose={() => setError(null)}
+        />
       )}
 
       {successMsg && (
-        <div className="p-3 bg-green-50 border border-green-200 rounded text-xs text-green-700">
-          {successMsg}
-        </div>
+        <AlertBanner
+          type="success"
+          title="Desk Update"
+          message={successMsg}
+          onClose={() => setSuccessMsg(null)}
+        />
       )}
 
+      {/* Counter Table */}
       {initialLoading ? (
-        <div className="text-center py-8 text-xs text-gray-500 flex items-center justify-center gap-2">
-          <span className="w-3 h-3 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
-          Loading counters...
-        </div>
-      ) : counters.length === 0 ? (
-        <div className="text-center py-8 bg-gray-50 rounded border border-gray-200 text-xs text-gray-500">
-          No counters configured yet. Click &quot;+ Add Counter&quot; to create one.
-        </div>
+        <LoadingState message="Loading counters & desk roster..." />
+      ) : filteredCounters.length === 0 ? (
+        <EmptyState
+          title="No counters found"
+          message={
+            searchQuery
+              ? `No counters matching "${searchQuery}".`
+              : 'No counters configured yet. Click "Add Counter" to create one.'
+          }
+          action={
+            searchQuery
+              ? {
+                  label: 'Clear Filter',
+                  onClick: () => setSearchQuery(''),
+                }
+              : {
+                  label: 'Add First Counter',
+                  onClick: handleOpenCreate,
+                }
+          }
+        />
       ) : (
-        <div className="overflow-x-auto border border-gray-200 rounded-lg">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50 text-gray-600 uppercase border-b border-gray-200">
+        <div className="overflow-x-auto border border-slate-200/90 rounded-2xl bg-white shadow-2xs">
+          <table className="w-full text-left text-xs text-slate-800">
+            <thead className="bg-slate-50 text-slate-600 uppercase text-[11px] font-bold border-b border-slate-200 tracking-wider">
               <tr>
-                <th className="py-2.5 px-4 font-semibold">Desk #</th>
-                <th className="py-2.5 px-4 font-semibold">Counter Name</th>
-                <th className="py-2.5 px-4 font-semibold">Status</th>
-                <th className="py-2.5 px-4 font-semibold">Session State</th>
-                <th className="py-2.5 px-4 font-semibold text-right">Desk Actions</th>
-                <th className="py-2.5 px-4 font-semibold text-right">Admin Actions</th>
+                <th className="py-3 px-4">Desk #</th>
+                <th className="py-3 px-4">Desk Name</th>
+                <th className="py-3 px-4">Active Session</th>
+                <th className="py-3 px-4">Hardware Status</th>
+                <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {counters.map((c) => {
-                const isSessionOpen = !!c.currentSession;
+
+            <tbody className="divide-y divide-slate-100">
+              {filteredCounters.map((c) => {
                 const isPending = actionPendingId === c.id;
+                const hasSession = !!c.currentSession?.isActive;
+
                 return (
-                  <tr key={c.id} className="hover:bg-gray-50/75 transition">
-                    <td className="py-2.5 px-4 font-mono font-bold text-gray-900">
+                  <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900 text-sm">
                       #{c.counterNumber}
                     </td>
-                    <td className="py-2.5 px-4 text-gray-800 font-medium">{c.name}</td>
-                    <td className="py-2.5 px-4">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                          c.isActive
-                            ? 'bg-green-100 text-green-800 border border-green-200'
-                            : 'bg-gray-100 text-gray-600 border border-gray-200'
-                        }`}
-                      >
-                        {c.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-4">
-                      {isSessionOpen ? (
-                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[10px] font-medium">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                          OPEN ({c.currentSession?.user?.name || c.currentSession?.user?.email || 'Logged In'})
+
+                    <td className="py-3.5 px-4 font-semibold text-slate-900">{c.name}</td>
+
+                    <td className="py-3.5 px-4">
+                      {hasSession ? (
+                        <div className="space-y-0.5">
+                          <Badge variant="success" size="sm" dot pulse>
+                            Session Open
+                          </Badge>
+                          <span className="text-[10px] text-slate-400 block font-mono">
+                            Opened:{' '}
+                            {c.currentSession?.openedAt
+                              ? new Date(c.currentSession.openedAt).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                              : '-'}
+                          </span>
                         </div>
                       ) : (
-                        <span className="px-2 py-0.5 bg-gray-100 text-gray-500 border border-gray-200 rounded-full text-[10px]">
-                          CLOSED
+                        <Badge variant="neutral" size="sm">
+                          Standby / Closed
+                        </Badge>
+                      )}
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      {c.isActive ? (
+                        <span className="inline-flex items-center gap-1.5 text-slate-700 font-medium text-xs">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                          Enabled
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-slate-400 font-medium text-xs">
+                          <span className="w-2 h-2 rounded-full bg-slate-300" />
+                          Disabled
                         </span>
                       )}
                     </td>
-                    <td className="py-2.5 px-4 text-right">
-                      {isSessionOpen ? (
-                        <button
-                          onClick={() => handleCloseSession(c)}
-                          disabled={isPending}
-                          className="px-2.5 py-1 bg-amber-50 border border-amber-300 text-amber-800 rounded font-medium hover:bg-amber-100 transition disabled:opacity-50 inline-flex items-center gap-1"
-                        >
-                          {isPending && (
-                            <span className="w-2.5 h-2.5 rounded-full border border-current border-t-transparent animate-spin" />
-                          )}
-                          Close Session
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleOpenSession(c)}
-                          disabled={!c.isActive || isPending}
-                          className="px-2.5 py-1 bg-green-50 border border-green-300 text-green-800 rounded font-medium hover:bg-green-100 transition disabled:opacity-40 inline-flex items-center gap-1"
-                        >
-                          {isPending && (
-                            <span className="w-2.5 h-2.5 rounded-full border border-current border-t-transparent animate-spin" />
-                          )}
-                          Open Session
-                        </button>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-4 text-right space-x-2">
-                      <button
-                        onClick={() => handleOpenEdit(c)}
-                        disabled={isPending}
-                        className="text-blue-600 hover:text-blue-800 font-medium disabled:opacity-40"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleToggleStatus(c)}
-                        disabled={isPending}
-                        className={`font-medium disabled:opacity-40 inline-flex items-center gap-1 ${
-                          c.isActive ? 'text-amber-600 hover:text-amber-800' : 'text-green-600 hover:text-green-800'
-                        }`}
-                      >
-                        {isPending && (
-                          <span className="w-2.5 h-2.5 rounded-full border border-current border-t-transparent animate-spin" />
+
+                    <td className="py-3.5 px-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {hasSession ? (
+                          <Button
+                            variant="destructive-outline"
+                            size="sm"
+                            isLoading={isPending}
+                            onClick={() => handleCloseSession(c)}
+                          >
+                            Close Shift
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="success"
+                            size="sm"
+                            isLoading={isPending}
+                            disabled={!c.isActive}
+                            onClick={() => handleOpenSession(c)}
+                          >
+                            Open Shift
+                          </Button>
                         )}
-                        {c.isActive ? 'Deactivate' : 'Activate'}
-                      </button>
+
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleOpenEdit(c)}
+                          disabled={isPending}
+                        >
+                          Edit
+                        </Button>
+
+                        <Button
+                          variant={c.isActive ? 'destructive-outline' : 'secondary'}
+                          size="sm"
+                          isLoading={isPending}
+                          onClick={() => handleToggleStatus(c)}
+                        >
+                          {c.isActive ? 'Disable' : 'Enable'}
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -351,56 +448,96 @@ export function CountersManagement() {
         </div>
       )}
 
+      {/* Modal Dialog */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 space-y-4">
-            <h4 className="text-base font-bold text-gray-900">
-              {editingCounter ? 'Edit Counter' : 'Create New Counter'}
-            </h4>
-            <form onSubmit={handleSubmit} className="space-y-3 text-xs">
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto"
+          aria-modal="true"
+          role="dialog"
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            className="bg-white rounded-3xl border border-slate-200 max-w-md w-full p-6 space-y-5 shadow-lg my-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900">
+                {editingCounter ? 'Edit Counter Desk' : 'Register New Counter Desk'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="text-slate-400 hover:text-slate-700 p-1 text-sm rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-gray-700 font-medium mb-1">Counter / Desk Number *</label>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Desk Number
+                </label>
                 <input
                   type="number"
                   required
                   min={1}
                   value={formData.counterNumber}
-                  onChange={(e) => setFormData({ ...formData, counterNumber: parseInt(e.target.value, 10) || 1 })}
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 font-mono"
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      counterNumber: parseInt(e.target.value, 10) || 1,
+                    })
+                  }
+                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl font-mono text-xs focus:ring-2 focus:ring-slate-900"
                 />
               </div>
 
               <div>
-                <label className="block text-gray-700 font-medium mb-1">Counter Name / Label *</label>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Desk Display Name
+                </label>
                 <input
                   type="text"
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g. Citizen Help Desk / Certificate Services"
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                  placeholder="e.g. Counter 1 (Revenue Desk)"
+                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-slate-900"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
-                <button
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="isCounterActiveToggle"
+                  checked={formData.isActive}
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                  className="w-4 h-4 rounded text-slate-900 focus:ring-slate-900 border-slate-300"
+                />
+                <label htmlFor="isCounterActiveToggle" className="text-xs font-semibold text-slate-700">
+                  Desk hardware is enabled for operator sessions
+                </label>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+                <Button
                   type="button"
-                  disabled={isSaving}
+                  variant="secondary"
+                  size="md"
                   onClick={() => setShowModal(false)}
-                  className="px-3 py-1.5 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={isSaving}
-                  className="px-4 py-1.5 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition disabled:opacity-50 inline-flex items-center gap-1.5"
+                  variant="primary"
+                  size="md"
+                  isLoading={isSaving}
+                  loadingText="Saving..."
                 >
-                  {isSaving && (
-                    <span className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                  )}
-                  {editingCounter ? 'Save Changes' : 'Create Counter'}
-                </button>
+                  {editingCounter ? 'Update Desk' : 'Register Desk'}
+                </Button>
               </div>
             </form>
           </div>
@@ -409,4 +546,3 @@ export function CountersManagement() {
     </div>
   );
 }
-

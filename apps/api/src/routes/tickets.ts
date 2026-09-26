@@ -14,9 +14,10 @@ export const ticketsRouter = Router();
 // Guard for admin desk operations
 const adminDeskGuard = [requireAuth, requireRole(UserRole.ADMIN), syncUserMiddleware];
 
-// POST /api/tickets/issue - Issue a new queue ticket (public / customer / kiosk)
+// POST /api/tickets/issue - Issue a new queue ticket (requires authenticated citizen/user)
 ticketsRouter.post(
   '/api/tickets/issue',
+  requireAuth,
   syncUserMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
     try {

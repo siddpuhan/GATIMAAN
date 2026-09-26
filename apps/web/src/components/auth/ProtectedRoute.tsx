@@ -2,6 +2,7 @@ import React from 'react';
 import { useUser, SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
 import { UserRole } from '@gatimaan/shared';
 import { Link } from 'react-router-dom';
+import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card.js';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -13,8 +14,9 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
   if (!isLoaded) {
     return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <div className="text-gray-500 font-medium animate-pulse">Loading session...</div>
+      <div className="flex flex-col items-center justify-center min-h-[40vh] space-y-3">
+        <div className="w-8 h-8 rounded-full border-3 border-slate-900 border-t-transparent animate-spin" />
+        <div className="text-xs font-semibold text-slate-600">Verifying session security...</div>
       </div>
     );
   }
@@ -29,21 +31,31 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
           if (allowedRoles && !allowedRoles.includes(userRole)) {
             return (
-              <div className="max-w-md mx-auto mt-12 p-6 bg-red-50 border border-red-200 rounded-lg text-center">
-                <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-3 text-xl font-bold">
-                  !
-                </div>
-                <h3 className="text-lg font-semibold text-red-900 mb-1">Access Denied</h3>
-                <p className="text-sm text-red-700 mb-4">
-                  Your account ({userRole}) does not have permission to access this administrative
-                  resource.
-                </p>
-                <Link
-                  to="/"
-                  className="inline-block px-4 py-2 bg-red-600 text-white rounded text-sm font-medium hover:bg-red-700 transition"
-                >
-                  Return to Home
-                </Link>
+              <div className="max-w-md mx-auto mt-12">
+                <Card>
+                  <CardHeader className="text-center pb-2">
+                    <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center mx-auto mb-3 text-xl font-bold">
+                      !
+                    </div>
+                    <CardTitle className="text-rose-900">Access Restricted</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-center space-y-4 pt-0">
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Your authenticated account has role{' '}
+                      <strong className="font-mono text-slate-900 font-bold">{userRole}</strong>.
+                      This administrative queue operations console requires{' '}
+                      <strong className="font-mono text-slate-900 font-bold">ADMIN</strong> access privileges.
+                    </p>
+                    <div className="pt-2">
+                      <Link
+                        to="/"
+                        className="inline-flex items-center justify-center px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition shadow-xs"
+                      >
+                        ← Return to Citizen Portal
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             );
           }

@@ -1,267 +1,253 @@
-# GATIMAAN
-> **IoT-Enabled Smart Queue Management System**
+# GATIMAAN (गतिमान) — Smart Queue Management Platform
 
-GATIMAAN is a modern, IoT-integrated queue management platform built for MP Online citizen service centers. It replaces physical waiting lines with instant digital tokens, live position tracking, realtime counter calling, and automated footfall monitoring.
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19.0-61dafb.svg)](https://react.dev/)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.0-green.svg)](https://nodejs.org/)
+[![License](https://img.shields.io/badge/License-MIT-slate.svg)](LICENSE)
 
----
-
-## What GATIMAAN Provides
-
-- **Citizen / Customer Portal**:
-  - Browse active citizen services (Aadhaar, PAN, Samagra, Revenue, etc.).
-  - Generate instant digital queue tokens without mandatory app installation.
-  - Live ticket tracking pass displaying queue position, estimated wait times, and assigned counter callouts.
-  - Ticket cancellation and automatic session recovery across browser reloads via local storage.
-- **Admin & Counter Operations**:
-  - Role-protected administrative shell and desk calling engine.
-  - Counter session management (open/close operator sessions).
-  - Desk ticket workflow: call next waiting citizen, start serving, mark completed, or record no-show/skip.
-- **IoT Gate & Footfall Monitoring**:
-  - Hardware integration with ESP32 microcontrollers and bidirectional IR sensors.
-  - Automated entry/exit footfall event ingestion via secure HTTPS POST endpoints.
-- **Rule-Based Prediction Engine**:
-  - Deterministic, pure TypeScript queue wait-time calculations and footfall estimation.
-  - **No external ML models, Python runtimes, or LLM training pipelines are used** — all prediction logic is pure statistical and rule-based computation (`predictNextHourFootfall()`, `estimateWaitSeconds()`, `demandLevel()`).
+**GATIMAAN** is an enterprise-grade digital queue management and citizen facilitation platform designed for government citizen-service centers (e.g., MP Online, Tehsil, Sub-Divisional Magistrate, and Municipal utility facilitation offices). It eliminates chaotic physical queues through real-time virtual token tracking, dynamic desk routing, smart SLA analytics, and IoT hardware integration.
 
 ---
 
-## High-Level Architecture
+## 🏛️ System Overview
 
-GATIMAAN is structured as a **modular monolith** with a single unified backend process handling both REST APIs and Socket.IO realtime broadcasts.
+The platform is structured into two core user workflows:
 
-```
-React 19 + Vite Web (@gatimaan/web)
-        │
-        ▼ (HTTP REST + Socket.IO)
-Express 5 API Server (@gatimaan/api)
-        │
-        ▼ (Prisma 7 + @prisma/adapter-pg)
-PostgreSQL Database (Supabase)
-        ▲
-        │ (HTTPS POST)
-ESP32 Gate Controller (firmware/gatimaan-gate)
-```
+1. **Citizen Portal (Mobile-First):**
+   - **Service Directory:** Browse active government facilitation departments (Revenue & Tehsil, Municipal, Utilities, Identity & Certificates) with real-time status and estimated turnaround times.
+   - **Token Generation:** One-click digital token issuance with instant token ID and QR pass generation.
+   - **Live Queue Tracking:** Real-time token tracking (`/track` and `/dashboard`), live queue timeline, estimated wait durations, and counter callout banners.
+   - **Ticket Management:** Access ticket details (`/ticket/:id`) and cancel tickets when needed.
+
+2. **Admin & Operator Cockpit (Desktop-First):**
+   - **Overview Dashboard:** Live citizen footfall metrics, active counters, service SLA health, and operational snapshot strip.
+   - **Queue Desk Cockpit:** 65/35 dual-pane operational console with `CALL NEXT CITIZEN`, serving duration timer, citizen handover, and separated `NO-SHOW` / `SKIP` controls.
+   - **Services Management:** Dynamic catalog configuration (service codes, SLA duration, priority ranks, active toggle).
+   - **Counters Management:** Desk registration, operator shift assignments, and live counter status monitoring.
+   - **Protected Access:** Role-aware authentication and route protection powered by Clerk.
 
 ---
 
-## Tech Stack
+## 🛠️ Technology Stack
 
 | Layer | Technologies |
 | :--- | :--- |
-| **Frontend** | React 19, Vite, TypeScript, Tailwind CSS v4, React Router v7, Socket.IO Client |
-| **Backend** | Node.js 22, Express 5, TypeScript, Prisma 7, `@prisma/adapter-pg`, `pg.Pool`, Socket.IO |
-| **Database** | PostgreSQL (hosted on Supabase with Transaction Pooler) |
-| **Authentication** | Clerk (`@clerk/clerk-react`, `@clerk/express`) with role claims (`CUSTOMER`, `ADMIN`) |
-| **Realtime** | Socket.IO server with in-process Node.js `EventEmitter` event bus |
-| **IoT / Firmware** | ESP32 microcontroller with dual IR beam sensors (`firmware/gatimaan-gate`) |
-| **Testing & Quality** | Node.js Test Runner (`tsx --test`), Supertest, ESLint, TypeScript (`tsc -b`) |
+| **Frontend (`@gatimaan/web`)** | React 19, TypeScript, Vite, TailwindCSS v4, Lucide Icons, Clerk React |
+| **Backend (`@gatimaan/api`)** | Node.js, Express, Socket.IO, Prisma ORM, PostgreSQL (Supabase), Clerk SDK |
+| **Shared (`@gatimaan/shared`)** | TypeScript DTOs, Enums, State Transition Validators |
+| **Tooling & Quality** | npm Workspaces, ESLint 9, Prettier, Node Test Runner / TSX |
 
 ---
 
-## Repository Structure
+## 📁 Repository Structure
 
-```
+```text
 GATIMAAN/
 ├── apps/
-│   ├── api/                 # Express 5 API + Socket.IO server + Prisma 7 ORM
-│   │   ├── prisma/          # Prisma schema and seed scripts
-│   │   └── src/
-│   │       ├── db/          # Database client & connection pool singleton
-│   │       ├── middleware/  # Clerk auth, role guards, and error handlers
-│   │       ├── realtime/    # Socket.IO handlers and event dispatchers
-│   │       ├── routes/      # Express controllers (services, counters, tickets)
-│   │       └── services/    # Core business logic & concurrency-safe queue engine
-│   └── web/                 # React 19 + Vite citizen and admin web application
-│       └── src/
-│           ├── components/  # Customer UI components, layout, and loading states
-│           ├── hooks/       # Realtime Socket.IO subscription hooks
-│           ├── lib/         # Ticket storage helpers and socket singleton
-│           └── pages/       # Citizen portal, live pass, and admin pages
+│   ├── web/                     # Frontend SPA (React + Vite + TailwindCSS)
+│   │   ├── src/
+│   │   │   ├── components/      # UI tokens (Button, Badge, Card, Modals), admin & customer components
+│   │   │   ├── pages/           # Landing, Citizen Services, Dashboard, Admin Cockpit, etc.
+│   │   │   ├── hooks/           # Realtime Socket.IO listeners
+│   │   │   └── lib/             # Shared helpers, ticket storage, design tokens
+│   │   └── package.json
+│   └── api/                     # Backend REST API + Socket.IO server
+│       ├── prisma/              # Database schema & migrations
+│       ├── src/
+│       │   ├── routes/          # Express API endpoints
+│       │   ├── services/        # Queue engine, counters, services business logic
+│       │   ├── realtime/        # Socket.IO event broadcaster
+│       │   └── middleware/      # Auth & error handling
+│       └── package.json
 ├── packages/
-│   └── shared/              # Shared TypeScript interfaces, DTOs, Zod schemas, enums
-├── firmware/
-│   └── gatimaan-gate/       # ESP32 Arduino C++ firmware for IR footfall gate
-└── docs/                    # Architecture records, DB schema, and API contracts
+│   └── shared/                  # Shared TypeScript types, DTOs, and constants
+│       ├── src/
+│       └── package.json
+├── docs/                        # Architecture, DB schema, and API contracts
+├── tools/                       # Queue simulator & load testing utilities
+├── firmware/                    # IoT gate hardware integration firmware
+├── package.json                 # Monorepo root scripts & workspace config
+└── tsconfig.base.json           # Unified TypeScript configuration
 ```
 
 ---
 
-## Environment Setup
+## 🚀 Quick Start Guide
 
-The repository requires two separate `.env` files for local development. Copy the example templates to get started:
+### 1. Prerequisites
+- **Node.js:** `>= 20.0.0`
+- **npm:** `>= 10.0.0`
+- **PostgreSQL:** Local instance or cloud database (e.g. Supabase)
 
-### 1. Backend Environment (`apps/api/.env`)
+### 2. Installation
+Clone the repository and install dependencies across all workspaces:
+
 ```bash
-cp apps/api/.env.example apps/api/.env
-```
-Key variables:
-- `PORT`: API server port (default: `8000`)
-- `NODE_ENV`: `development` or `production`
-- `CORS_ORIGIN`: Allowed frontend origin (`http://localhost:5173`)
-- `DATABASE_URL`: PostgreSQL connection string (Supabase Transaction Pooler, port `6543`)
-- `DIRECT_URL`: Direct PostgreSQL connection string for Prisma migrations
-- `CLERK_SECRET_KEY`: Clerk backend secret key
-
-### 2. Frontend Environment (`apps/web/.env`)
-```bash
-cp apps/web/.env.example apps/web/.env
-```
-Key variables:
-- `VITE_API_BASE_URL`: Backend API URL (`http://localhost:8000`)
-- `VITE_CLERK_PUBLISHABLE_KEY`: Clerk frontend publishable key
-
-> **Security Rule**: Never commit `.env` files, database connection strings, or API credentials to version control.
-
----
-
-## Local Development
-
-### 1. Install Dependencies
-```bash
+git clone <repository-url>
+cd GATIMAAN
 npm install
 ```
 
-### 2. Run Applications
+### 3. Environment Configuration
 
-To start both the API server and Web frontend concurrently:
+Create `.env` files for both frontend and backend using the provided templates.
+
+#### Backend (`apps/api/.env`):
+```env
+PORT=8000
+NODE_ENV=development
+CORS_ORIGIN=http://localhost:5173
+
+# PostgreSQL Connection
+DATABASE_URL=postgresql://user:password@localhost:5432/gatimaan
+DIRECT_URL=postgresql://user:password@localhost:5432/gatimaan
+
+# Clerk Backend Authentication
+CLERK_SECRET_KEY=sk_test_your_clerk_secret_key
+```
+
+#### Frontend (`apps/web/.env`):
+```env
+VITE_API_BASE_URL=http://localhost:8000
+
+# Clerk Frontend Authentication
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_your_clerk_publishable_key
+```
+
+### 4. Database Setup
+Generate Prisma client artifacts and run migrations:
+
+```bash
+# Generate Prisma Client
+npm run prisma:generate
+
+# Run DB Migrations (from apps/api directory)
+cd apps/api && npx prisma migrate dev && cd ../..
+```
+
+### 5. Running the Application
+
+To start both the Backend API server and Frontend Vite development server concurrently:
+
 ```bash
 npm run dev
 ```
 
-To run individual workspaces:
-```bash
-# Start Express API server (runs on http://localhost:8000 with hot-reload)
-npm run dev:api
-
-# Start React Vite frontend (runs on http://localhost:5173)
-npm run dev:web
-```
-
-### 3. Quality & Verification Commands
-```bash
-# Run linting across all packages
-npm run lint
-
-# Run TypeScript typechecks across all workspaces
-npm run typecheck
-
-# Run automated integration and unit test suites
-npm test
-
-# Build production bundles
-npm run build
-```
+Or run services individually:
+- **API Server only:** `npm run dev:api` (Runs on `http://localhost:8000`)
+- **Web App only:** `npm run dev:web` (Runs on `http://localhost:5173`)
 
 ---
 
-## Important Frontend Routes
+## 🧪 Testing & Verification
 
-| Route | Access | Description |
+Run the project quality verification commands:
+
+| Command | Action |
+| :--- | :--- |
+| `npm run typecheck` | Validates TypeScript types across all workspaces with `tsc -b` |
+| `npm run lint` | Lints entire repository using ESLint |
+| `npm test` | Executes unit tests across workspaces |
+| `npm run build` | Compiles production bundles for all packages |
+
+---
+
+## 🚢 Production Deployment & Environment Setup
+
+### 1. Environment Separation
+| Environment Variable | Target | Purpose | Example |
+| :--- | :--- | :--- | :--- |
+| `DATABASE_URL` | Backend (`@gatimaan/api`) | Primary PostgreSQL connection string with connection pooling | `postgresql://...` |
+| `DIRECT_URL` | Backend (`@gatimaan/api`) | Direct database URL for Prisma schema migrations | `postgresql://...` |
+| `CLERK_SECRET_KEY` | Backend (`@gatimaan/api`) | Server-side Clerk secret for JWT verification & RBAC | `sk_live_...` |
+| `CORS_ORIGIN` | Backend (`@gatimaan/api`) | Production domain allowed to communicate with the API | `https://gatimaan.gov.in` |
+| `PORT` | Backend (`@gatimaan/api`) | Server listening port | `8000` |
+| `VITE_API_BASE_URL` | Frontend (`@gatimaan/web`) | Base URL for REST endpoints and Socket.IO connection | `https://api.gatimaan.gov.in` |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Frontend (`@gatimaan/web`) | Client-side Clerk publishable key | `pk_live_...` |
+
+### 2. Frontend Hosting (Vercel, Netlify, Render Static)
+- **Root Directory:** `apps/web` (or workspace root with `-w @gatimaan/web`)
+- **Build Command:** `npm run build`
+- **Output Directory:** `apps/web/dist`
+- **SPA Rewrites:** Pre-configured with `apps/web/public/_redirects` and `apps/web/vercel.json` to handle direct URL deep linking (`/services`, `/dashboard`, `/track`, `/admin/*`).
+
+### 3. Backend Hosting (Railway, Render, AWS ECS)
+- **Root Directory:** `apps/api`
+- **Build Command:** `npm run build` (runs `prisma generate && tsc -b`)
+- **Start Command:** `node dist/server.js`
+- **Health Check Endpoint:** `GET /health` (returns `{ status: "ok", version: "0.1.0" }`)
+
+---
+
+## ✅ Deployment Checklist
+
+- [ ] Production PostgreSQL database created and connection URLs set (`DATABASE_URL`, `DIRECT_URL`).
+- [ ] Database migrations applied using `npx prisma migrate deploy`.
+- [ ] Clerk production instance configured with User Roles (`ADMIN`, `OPERATOR`, `CUSTOMER`).
+- [ ] Backend environment variables configured (`CLERK_SECRET_KEY`, `CORS_ORIGIN`, `PORT`).
+- [ ] Backend deployed and verified healthy via `GET /health`.
+- [ ] Frontend environment variables configured (`VITE_API_BASE_URL`, `VITE_CLERK_PUBLISHABLE_KEY`).
+- [ ] Frontend production build compiled and deployed with SPA redirect rules.
+- [ ] End-to-end smoke test executed: Token creation $\rightarrow$ Live tracking $\rightarrow$ Admin Call Next $\rightarrow$ Service completion.
+- [ ] SSL/TLS certificates active on both frontend and API domains.
+
+---
+
+## 📊 Monitoring & Troubleshooting
+
+### 1. Health Check Endpoint
+- **URL:** `GET /health`
+- **Expected Status:** `200 OK`
+- **Response Format:**
+  ```json
+  {
+    "status": "ok",
+    "timestamp": "2026-09-25T15:02:38.176Z",
+    "uptime": 777.3,
+    "version": "0.1.0"
+  }
+  ```
+
+### 2. Operational Troubleshooting Matrix
+| Symptom | Probable Cause | Action / Verification |
 | :--- | :--- | :--- |
-| `/` or `/services` | Public | **Citizen Portal**: Browse services, search catalog, and issue digital tokens |
-| `/ticket/:id` | Public | **Live Ticket Tracking Pass**: Realtime queue position, status badge, wait time, and counter callout |
-| `/admin` | Admin Only | **Admin Shell**: Management dashboard for services, counters, and desk operations |
-| `/sign-in/*` | Public | Clerk authentication sign-in page |
-| `/sign-up/*` | Public | Clerk authentication sign-up page |
+| **API returning 500 error** | Database connection failure or missing `DATABASE_URL` | Inspect server logs for `[API Error]`; verify database status on cloud provider. |
+| **Admin pages redirect to /sign-in** | Expired or invalid Clerk session token | Sign in with an authorized user containing `ADMIN` role in `publicMetadata`. |
+| **Real-time queue not updating** | Socket.IO connection failed or CORS mismatch | Verify `VITE_API_BASE_URL` on web and `CORS_ORIGIN` on API match deployed hostnames. |
+| **404 on page refresh in production** | Static host missing SPA rewrite rule | Ensure `_redirects` or `vercel.json` is deployed in public build assets. |
 
 ---
 
-## Important API Endpoints
+## 💾 Backup & Recovery Strategy
 
-### Services (`/api/services`)
-- `GET /api/services`: List available services (public returns active services; admins see all).
-- `GET /api/services/:id`: Get single service details.
-- `POST /api/services`: Create a new service *(Admin required)*.
-- `PATCH /api/services/:id`: Update service configuration *(Admin required)*.
-- `PATCH /api/services/:id/status`: Toggle active status *(Admin required)*.
-
-### Counters (`/api/counters`)
-- `GET /api/counters`: List all counters with active session status *(Admin required)*.
-- `POST /api/counters`: Register a new physical counter *(Admin required)*.
-- `POST /api/counters/:id/open`: Open an operator session for a counter *(Admin required)*.
-- `POST /api/counters/:id/close`: Close the active session on a counter *(Admin required)*.
-
-### Tickets & Queue Operations (`/api/tickets`)
-- `POST /api/tickets/issue`: Issue a new digital ticket with sequential daily numbering.
-- `GET /api/tickets/:id`: Fetch ticket details, service info, and assigned counter.
-- `GET /api/tickets/:id/position`: Calculate dynamic queue position and estimated wait time.
-- `POST /api/tickets/:id/cancel`: Cancel an active waiting/called ticket.
-- `POST /api/tickets/call-next`: Call the next waiting ticket to counter *(Admin required)*.
-- `POST /api/tickets/:id/serve`: Transition called ticket to serving *(Admin required)*.
-- `POST /api/tickets/:id/complete`: Complete ticket service *(Admin required)*.
-- `POST /api/tickets/:id/skip`: Mark called ticket as no-show/skipped *(Admin required)*.
+- **Database Provider Backups:** Ensure daily automated backups and Point-In-Time Recovery (PITR) are enabled on the PostgreSQL instance (Supabase / AWS RDS).
+- **Prisma Schema Migrations:** All schema changes are tracked in `apps/api/prisma/migrations`. In production, apply migrations strictly via:
+  ```bash
+  npx prisma migrate deploy
+  ```
+- **Disaster Recovery:** To restore the database from a backup, restore the latest snapshot via the database dashboard and re-run Prisma migration status check (`npx prisma migrate status`).
 
 ---
 
-## Realtime Architecture (Socket.IO)
+## 🔄 Rollback & Failure Recovery Guide
 
-GATIMAAN uses Socket.IO rooms for targeted event broadcasting:
-
-| Room / Topic | Description | Broadcast Events |
-| :--- | :--- | :--- |
-| `ticket:<ticketId>` | Subscribed by the citizen viewing their live pass | `ticket.updated` |
-| `queue:<serviceId>` | Subscribed by citizen catalog and operator desks | `queue.updated` |
-| `footfall` | Subscribed by admin overview and facility displays | `footfall.updated` |
-| `prediction` | Subscribed by queue prediction displays | `prediction.updated` |
-
----
-
-## Authentication & Roles
-
-Authentication is powered by Clerk. User roles are managed via Clerk session metadata:
-- **`CUSTOMER`** *(Default)*: Can browse public services, issue tickets, view their live digital pass, and cancel tickets.
-- **`ADMIN`**: Authorized to create/edit services and counters, open/close counter desk sessions, and perform ticket calling actions.
+1. **Frontend Failure:**
+   - Revert to previous successful commit on Git and trigger hosting redeployment (Vercel / Netlify / Render).
+   - In Vercel / Netlify UI, use the *Instant Rollback* button to switch production traffic to the previous known-good deployment artifact.
+2. **Backend Failure:**
+   - Inspect server logs for uncaught exceptions.
+   - If a newly deployed backend version fails startup, roll back the container or container image tag to the preceding stable build.
+3. **Database Schema Rollback:**
+   - If a migration fails, inspect the active schema state with `npx prisma migrate status`.
+   - Apply a safe forward migration to correct or revert the conflicting table state.
 
 ---
 
-## Queue State Machine
+## 🔒 Security & Quality Standards
 
-```
-              ┌───────────────┐
-              │    WAITING    │
-              └───────┬───────┘
-                      │ (call-next)
-                      ▼
-              ┌───────────────┐
-   ┌──────────┤    CALLED     ├──────────┐
-   │ (cancel) └───────┬───────┘ (no-show)│
-   ▼                  │ (serve)          ▼
-┌───────────┐         ▼            ┌───────────┐
-│ CANCELLED │ ┌───────────────┐    │  NO_SHOW  │
-└───────────┘ │    SERVING    │    └───────────┘
-              └───────┬───────┘
-                      │ (complete)
-                      ▼
-              ┌───────────────┐
-              │   COMPLETED   │
-              └───────────────┘
-```
+- **Zero Secret Commits:** `.gitignore` strictly ignores local `.env` and runtime build artifacts.
+- **Role-Based Routing:** Sensitive admin endpoints and UI routes are protected via verified Clerk JWT tokens.
+- **Safe Fallbacks:** Frontend components gracefully handle offline states, network latency, and empty queues without layout jumping.
+- **Accessibility:** Meets WCAG guidelines with keyboard `Escape` dismissals, high-contrast text tags, and ARIA live regions for realtime queue updates.
 
-Supported States:
-- **Active States**: `WAITING`, `CALLED`, `SERVING`
-- **Terminal States**: `COMPLETED`, `CANCELLED`, `NO_SHOW`, `TRANSFERRED`
 
----
-
-## Git & Development Workflow
-
-To maintain stability, development follows strict branch isolation:
-
-1. **Branch Isolation**: Never push directly to `main`. Create a dedicated feature/phase branch:
-   ```bash
-   git checkout -b phase-<number>-<feature-name>
-   ```
-2. **Quality Verification**: Before committing or pushing, verify all quality gates pass:
-   ```bash
-   npm run lint && npm run typecheck && npm test && npm run build
-   ```
-3. **Pull Request**: Push the branch and open a Pull Request targeting `main`.
-4. **Merge**: Review and merge into `main` only after all CI checks pass.
-
----
-
-## Current Development Status
-
-The core architectural foundation, PostgreSQL database layer, concurrency-safe queue engine, Socket.IO realtime broadcasts, and **Phase 8 Customer Portal** (with live ticket pass and instant state transitions) are fully implemented and verified. 
-
-Active development is currently focused on **Admin Queue Management** — implementing the operator desk calling station, active counter controls, and queue management controls within the existing `/admin` route.

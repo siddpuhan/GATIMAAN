@@ -1,110 +1,182 @@
-import React, { useState, useEffect } from 'react';
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { SignedIn, SignedOut, UserButton, useUser } from '@clerk/clerk-react';
-import { GATIMAAN_VERSION, UserRole } from '@gatimaan/shared';
+import React, { useState } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { UserRole } from '@gatimaan/shared';
 import { ProtectedRoute } from './components/auth/ProtectedRoute.js';
-import { CustomerPortalPage } from './pages/CustomerPortalPage.js';
+import { CitizenHeader } from './components/citizen/CitizenHeader.js';
+import { CitizenFooter } from './components/citizen/CitizenFooter.js';
+import { LandingPage } from './pages/LandingPage.js';
+import { CitizenServicesPage } from './pages/CitizenServicesPage.js';
 import { TicketTrackingPage } from './pages/TicketTrackingPage.js';
 import { SignInPage } from './pages/SignInPage.js';
 import { SignUpPage } from './pages/SignUpPage.js';
 import { AdminShellPage } from './pages/AdminShellPage.js';
 import { getActiveTicketId } from './lib/ticketStorage.js';
 
+/**
+ * Consolidated redirect for legacy / convenience routes (/dashboard, /track, /ticket).
+ * If the citizen has an active queue pass on this device, takes them straight to the live pass.
+ * Otherwise, gracefully leads them to the Service Catalogue to find a service and get a token.
+ */
+function ActiveTokenRedirect() {
+  const activeId = getActiveTicketId();
+  if (activeId) {
+    return <Navigate to={`/ticket/${activeId}`} replace />;
+  }
+  return <Navigate to="/services" replace />;
+}
+
 export function App() {
-  const { user } = useUser();
   const location = useLocation();
-  const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
 
-  const rawRole = (user?.publicMetadata as { role?: string })?.role;
-  const currentRole =
-    rawRole?.toUpperCase() === UserRole.ADMIN ? UserRole.ADMIN : UserRole.CUSTOMER;
+  // Accessibility Controls: Font Scale and High Contrast Mode
+  const [fontScale, setFontScale] = useState<'sm' | 'md' | 'lg'>('md');
+  const [highContrast, setHighContrast] = useState(false);
 
-  useEffect(() => {
-    setActiveTicketId(getActiveTicketId());
-  }, [location]);
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
+  const fontScaleClass =
+    fontScale === 'sm' ? 'text-scale-sm' : fontScale === 'lg' ? 'text-scale-lg' : 'text-scale-md';
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
-      {/* Global Citizen Header */}
-      <header className="bg-white border-b border-gray-200 py-3 px-4 sm:px-6 shadow-2xs sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link
-              to="/"
-              className="flex items-center gap-2 text-xl font-black tracking-tight text-blue-600 hover:text-blue-700 transition"
+    <div
+      className={`min-h-screen bg-[#D6CCC2] flex flex-col font-sans text-slate-900 antialiased ${fontScaleClass} ${
+        highContrast ? 'theme-high-contrast' : ''
+      }`}
+    >
+      {/* 1. Skip to Main Content Link (Keyboard & Screen-Reader Accessible) */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-slate-950 focus:text-white focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-amber-400 font-bold text-xs"
+      >
+        Skip to main content / मुख्य सामग्री पर जाएं
+      </a>
+
+      {/* 2. Top Government of Madhya Pradesh Identity Strip */}
+      <div className="bg-slate-900 text-slate-100 text-xs py-2 px-4 sm:px-6 lg:px-8 xl:px-10 border-b border-slate-800">
+        <div className="max-w-[1440px] mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-3">
+            {/* State Emblem Slot */}
+            <div
+              className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-300 shrink-0"
+              title="State Emblem of Madhya Pradesh / मध्य प्रदेश शासन मुहर"
+              aria-label="State Emblem of Madhya Pradesh Slot"
             >
-              <span className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center text-sm font-black shadow-xs">
-                G
+              <span className="font-serif">🏛️</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-slate-100 text-[11px] sm:text-xs">
+                Government of Madhya Pradesh · मध्य प्रदेश शासन
               </span>
-              <span>GATIMAAN</span>
-            </Link>
-
-            <nav className="hidden sm:flex items-center gap-4 text-xs font-semibold text-gray-600">
-              <Link
-                to="/"
-                className={`transition hover:text-blue-600 ${
-                  location.pathname === '/' || location.pathname === '/services'
-                    ? 'text-blue-600'
-                    : ''
-                }`}
-              >
-                Citizen Portal
-              </Link>
-
-              {activeTicketId && (
-                <Link
-                  to={`/ticket/${activeTicketId}`}
-                  className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100 transition inline-flex items-center gap-1.5 font-bold"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
-                  <span>My Active Pass</span>
-                </Link>
-              )}
-
-              {currentRole === UserRole.ADMIN && (
-                <SignedIn>
-                  <Link
-                    to="/admin"
-                    className="hover:text-purple-600 text-purple-700 transition font-bold"
-                  >
-                    Admin Shell
-                  </Link>
-                </SignedIn>
-              )}
-            </nav>
+              <span className="text-[10px] text-slate-400">
+                Public Service Management Department · लोक सेवा प्रबंधन विभाग
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="hidden md:inline-block text-[11px] font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
-              v{GATIMAAN_VERSION}
-            </span>
-
-            <SignedIn>
-              <UserButton afterSignOutUrl="/" />
-            </SignedIn>
-            <SignedOut>
-              <Link
-                to="/sign-in"
-                className="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition shadow-xs"
+          {/* Accessibility Controls & Language */}
+          <div className="flex items-center gap-3 self-end sm:self-auto text-slate-300 text-[11px]">
+            {/* Font Size Scaling */}
+            <div
+              className="flex items-center bg-slate-800 border border-slate-700 rounded-md p-0.5"
+              role="group"
+              aria-label="Text Size Controls"
+            >
+              <button
+                type="button"
+                onClick={() => setFontScale('sm')}
+                className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition cursor-pointer ${
+                  fontScale === 'sm' ? 'bg-slate-700 text-white' : 'hover:text-white text-slate-300'
+                }`}
+                aria-label="Decrease text size (A-)"
+                title="Decrease font size"
               >
-                Sign In
-              </Link>
-            </SignedOut>
+                A-
+              </button>
+              <button
+                type="button"
+                onClick={() => setFontScale('md')}
+                className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition cursor-pointer ${
+                  fontScale === 'md' ? 'bg-slate-700 text-white' : 'hover:text-white text-slate-300'
+                }`}
+                aria-label="Standard text size (A)"
+                title="Standard font size"
+              >
+                A
+              </button>
+              <button
+                type="button"
+                onClick={() => setFontScale('lg')}
+                className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition cursor-pointer ${
+                  fontScale === 'lg' ? 'bg-slate-700 text-white' : 'hover:text-white text-slate-300'
+                }`}
+                aria-label="Increase text size (A+)"
+                title="Increase font size"
+              >
+                A+
+              </button>
+            </div>
+
+            {/* High Contrast Mode Toggle */}
+            <button
+              type="button"
+              onClick={() => setHighContrast(!highContrast)}
+              className={`px-2 py-1 bg-slate-800 border border-slate-700 rounded-md text-[10px] font-semibold transition cursor-pointer hover:text-white ${
+                highContrast ? 'bg-slate-700 text-amber-300 border-amber-400/40' : 'text-slate-300'
+              }`}
+              aria-label="Toggle high contrast display mode"
+              title="Toggle high contrast mode"
+            >
+              {highContrast ? 'Standard Contrast' : 'High Contrast'}
+            </button>
+
+            <span className="text-slate-600 hidden md:inline">|</span>
+            <span className="font-semibold text-slate-300">English / हिंदी</span>
           </div>
         </div>
-      </header>
+      </div>
 
-      {/* Main Container */}
-      <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6">
+      {/* Tricolor Accent Line */}
+      <div
+        className="h-[2.5px] w-full bg-gradient-to-r from-amber-600 via-slate-200 to-emerald-700 shrink-0"
+        aria-hidden="true"
+      />
+
+      {/* 3. Citizen navigation header (Phase U1 — reusable component) */}
+      <CitizenHeader />
+
+      {/* 4. Main Landmark Content Area */}
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className={`flex-1 w-full focus:outline-none ${
+          isAdminRoute
+            ? 'max-w-none px-3 sm:px-5 lg:px-6 xl:px-8 py-3 sm:py-4 lg:py-5'
+            : 'max-w-[1440px] mx-auto p-4 sm:p-6 lg:px-8 xl:px-10 lg:py-8'
+        }`}
+      >
         <Routes>
-          <Route path="/" element={<CustomerPortalPage />} />
-          <Route path="/services" element={<CustomerPortalPage />} />
+          {/* Public Landing Page */}
+          <Route path="/" element={<LandingPage />} />
+
+          {/* Citizen Service Catalogue */}
+          <Route path="/services" element={<CitizenServicesPage />} />
+
+          {/* Redundant Dashboard & Legacy Routes -> Consolidated Live Pass / Services Redirect */}
+          <Route path="/dashboard" element={<ActiveTokenRedirect />} />
+          <Route path="/track" element={<ActiveTokenRedirect />} />
+          <Route path="/ticket" element={<ActiveTokenRedirect />} />
+
+          {/* Specific Ticket Live-Status Pages */}
           <Route path="/ticket/:id" element={<TicketTrackingPage />} />
           <Route path="/tickets/:id" element={<TicketTrackingPage />} />
+
+          {/* Clerk Auth Pages */}
           <Route path="/sign-in/*" element={<SignInPage />} />
           <Route path="/sign-up/*" element={<SignUpPage />} />
+
+          {/* Admin / Operator Portal Shell with persistent sidebar & nested routes */}
           <Route
-            path="/admin"
+            path="/admin/*"
             element={
               <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
                 <AdminShellPage />
@@ -114,10 +186,8 @@ export function App() {
         </Routes>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-200 py-4 text-center text-xs text-gray-500 bg-white">
-        GATIMAAN - MP Online Smart Queue Management (IA-15 Hackathon)
-      </footer>
+      {/* 5. Citizen footer (Phase U1 — reusable component, content preserved) */}
+      <CitizenFooter />
     </div>
   );
 }

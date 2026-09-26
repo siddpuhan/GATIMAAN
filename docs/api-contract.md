@@ -168,7 +168,7 @@ All counter management endpoints require `ADMIN` role.
 ## 4. Queue & Ticket Engine Endpoints (Phase 6)
 
 ### `POST /api/tickets/issue`
-- **Auth**: Public / Optional `requireAuth`
+- **Auth**: Authenticated (`requireAuth`)
 - **Description**: Issues a sequential, race-free token for the specified active service.
 - **Request Body**:
 ```json
@@ -178,7 +178,7 @@ All counter management endpoints require `ADMIN` role.
 }
 ```
 - **Response**: `201 Created` — `TicketDTO`
-- **Errors**: `400 Bad Request` (Inactive service or invalid payload), `404 Not Found` (Nonexistent service)
+- **Errors**: `401 Unauthorized` (Authentication required), `400 Bad Request` (Inactive service or invalid payload), `404 Not Found` (Nonexistent service)
 
 ### `GET /api/tickets/:id`
 - **Auth**: Public / Optional `requireAuth`

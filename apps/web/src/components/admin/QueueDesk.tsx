@@ -17,6 +17,10 @@ import {
   useServicesSubscription,
 } from '../../hooks/useRealtime.js';
 import { WaitTimeDisplay } from '../customer/WaitTimeDisplay.js';
+import { Badge } from '../ui/Badge.js';
+import { Button } from '../ui/Button.js';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/Card.js';
+import { LoadingState } from '../ui/FeedbackStates.js';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const STORAGE_COUNTER_KEY = 'gatimaan_admin_desk_counter_id';
@@ -155,7 +159,7 @@ export function QueueDesk() {
   // Check if selected counter has an active session
   const hasActiveSession = Boolean(selectedCounter?.currentSession?.isActive);
 
-  // 3. Realtime Queue Updates (via useQueueSubscription)
+  // 3. Realtime Queue Updates
   const handleQueueUpdated = useCallback((payload: QueueUpdatedPayload) => {
     setQueueMetrics({
       waitingCount: payload.waitingCount,
@@ -167,7 +171,7 @@ export function QueueDesk() {
 
   useQueueSubscription(selectedServiceId || undefined, handleQueueUpdated);
 
-  // 4. Realtime Ticket Updates (via useTicketSubscription with canonical UUID)
+  // 4. Realtime Ticket Updates
   const handleTicketUpdated = useCallback((payload: TicketUpdatedPayload) => {
     if (payload.ticket && activeTicket && payload.ticket.id === activeTicket.id) {
       if (
@@ -235,11 +239,7 @@ export function QueueDesk() {
     return () => clearInterval(interval);
   }, [activeTicket]);
 
-  // -------------------------------------------------------------
   // Desk Action Handlers
-  // -------------------------------------------------------------
-
-  // Open Desk Shift
   const handleOpenDesk = async () => {
     if (!selectedCounterId) return;
     try {
@@ -276,7 +276,6 @@ export function QueueDesk() {
     }
   };
 
-  // Close Desk Shift
   const handleCloseDesk = async () => {
     if (!selectedCounterId) return;
     try {
@@ -314,7 +313,6 @@ export function QueueDesk() {
     }
   };
 
-  // Call Next Ticket
   const handleCallNext = async () => {
     if (!selectedCounterId) return;
     try {
@@ -350,7 +348,7 @@ export function QueueDesk() {
       } else {
         setActiveTicket(data.ticket);
         sessionStorage.setItem(STORAGE_TICKET_KEY, data.ticket.id);
-        setSuccessMsg(`Ticket ${data.ticket.ticketNumber} CALLED to Counter #${selectedCounter?.counterNumber}`);
+        setSuccessMsg(`Ticket ${data.ticket.ticketNumber} CALLED to Desk #${selectedCounter?.counterNumber}`);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error calling next ticket');
@@ -360,7 +358,6 @@ export function QueueDesk() {
     }
   };
 
-  // Start Serving
   const handleStartServing = async () => {
     if (!activeTicket || !selectedCounterId) return;
     try {
@@ -395,7 +392,6 @@ export function QueueDesk() {
     }
   };
 
-  // Complete Service
   const handleCompleteService = async () => {
     if (!activeTicket || !selectedCounterId) return;
     try {
@@ -431,7 +427,6 @@ export function QueueDesk() {
     }
   };
 
-  // Skip / Mark No-Show
   const handleSkipTicket = async () => {
     if (!activeTicket || !selectedCounterId) return;
     try {
@@ -452,11 +447,11 @@ export function QueueDesk() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.message || 'Failed to mark ticket as skipped');
+        throw new Error(data.message || 'Failed to skip ticket');
       }
 
       const data: { message: string; ticket: TicketDTO } = await res.json();
-      setSuccessMsg(`Ticket ${data.ticket.ticketNumber} marked as No-Show / Skipped`);
+      setSuccessMsg(`Ticket ${data.ticket.ticketNumber} marked as No-Show`);
       setActiveTicket(null);
       sessionStorage.removeItem(STORAGE_TICKET_KEY);
     } catch (err: unknown) {
@@ -467,45 +462,25 @@ export function QueueDesk() {
     }
   };
 
-  // Demand Level Badge helper
-  const getDemandBadge = (level?: DemandLevel) => {
-    switch (level) {
-      case DemandLevel.SURGE:
-        return 'bg-red-100 text-red-800 border-red-200 font-bold';
-      case DemandLevel.HIGH:
-        return 'bg-amber-100 text-amber-800 border-amber-200 font-bold';
-      case DemandLevel.MEDIUM:
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case DemandLevel.LOW:
-      default:
-        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-    }
-  };
-
   if (initialLoading) {
-    return (
-      <div className="py-12 text-center text-xs text-gray-500 flex items-center justify-center gap-2">
-        <span className="w-3.5 h-3.5 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
-        Initializing Queue Desk...
-      </div>
-    );
+    return <LoadingState message="Connecting to Queue Desk cockpit..." />;
   }
 
   return (
     <div className="space-y-6">
-      {/* Floating Notification Toast (Zero Layout Shift) */}
-      <div className="fixed top-6 right-6 z-50 flex flex-col gap-2.5 max-w-sm pointer-events-none">
+      {/* Toast Feedback Messages */}
+      <div className="fixed top-16 right-6 z-50 max-w-sm w-full space-y-2 pointer-events-none">
         {error && (
-          <div className="pointer-events-auto p-3.5 bg-white border border-red-200 border-l-4 border-l-red-600 rounded-xl text-xs text-gray-900 shadow-xl flex items-start justify-between gap-3">
-            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-600 font-bold shrink-0">
+          <div className="pointer-events-auto p-3.5 bg-white border border-rose-200 border-l-4 border-l-rose-600 rounded-2xl text-xs text-slate-900 shadow-lg flex items-start justify-between gap-3">
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-rose-100 text-rose-700 font-bold shrink-0">
               !
             </span>
             <div className="flex-1 font-medium leading-relaxed">{error}</div>
             <button
               type="button"
               onClick={() => setError(null)}
-              className="text-gray-400 hover:text-gray-700 font-bold ml-1 text-sm leading-none shrink-0"
-              aria-label="Close notification"
+              className="text-slate-400 hover:text-slate-700 font-bold ml-1 text-sm leading-none shrink-0"
+              aria-label="Close error notification"
             >
               ✕
             </button>
@@ -513,15 +488,15 @@ export function QueueDesk() {
         )}
 
         {successMsg && (
-          <div className="pointer-events-auto p-3.5 bg-white border border-emerald-200 border-l-4 border-l-emerald-600 rounded-xl text-xs text-gray-900 shadow-xl flex items-start justify-between gap-3">
-            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 font-bold shrink-0">
+          <div className="pointer-events-auto p-3.5 bg-white border border-emerald-200 border-l-4 border-l-emerald-600 rounded-2xl text-xs text-slate-900 shadow-lg flex items-start justify-between gap-3">
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 font-bold shrink-0">
               ✓
             </span>
             <div className="flex-1 font-medium leading-relaxed">{successMsg}</div>
             <button
               type="button"
               onClick={() => setSuccessMsg(null)}
-              className="text-gray-400 hover:text-gray-700 font-bold ml-1 text-sm leading-none shrink-0"
+              className="text-slate-400 hover:text-slate-700 font-bold ml-1 text-sm leading-none shrink-0"
               aria-label="Close notification"
             >
               ✕
@@ -530,185 +505,101 @@ export function QueueDesk() {
         )}
       </div>
 
-      {/* Desk & Service Selection Strip */}
-      <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-        {/* Counter Selection */}
-        <div className="space-y-1.5 min-w-0 w-full">
-          <label className="text-xs font-bold text-gray-700 block">
-            Select Service Counter / Desk
-          </label>
-          <div className="flex items-center gap-2 min-w-0 w-full">
-            <select
-              value={selectedCounterId || ''}
-              onChange={(e) => {
-                const val = e.target.value;
-                setSelectedCounterId(val);
-                sessionStorage.setItem(STORAGE_COUNTER_KEY, val);
-                setError(null);
-                setSuccessMsg(null);
-              }}
-              disabled={isActionPending}
-              className="flex-1 min-w-0 w-full h-9 px-3 py-1.5 text-xs border border-gray-300 rounded-xl bg-white font-medium text-gray-800 outline-none hover:border-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-colors disabled:opacity-50 disabled:bg-gray-100 disabled:cursor-not-allowed cursor-pointer truncate"
-            >
-              {counters.map((c) => {
-                const sessionStatus = c.currentSession?.isActive
-                  ? `(Open: ${c.currentSession.user?.name || 'Operator'})`
-                  : '(Closed)';
-                return (
-                  <option key={c.id} value={c.id}>
-                    Counter #{c.counterNumber} — {c.name} {sessionStatus}
-                  </option>
-                );
-              })}
-            </select>
-
-            {/* Shift Open/Close Toggle Button */}
-            {selectedCounter && (
-              hasActiveSession ? (
-                <button
-                  type="button"
-                  onClick={handleCloseDesk}
-                  disabled={isActionPending}
-                  className="shrink-0 h-9 px-3.5 inline-flex items-center justify-center bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs font-semibold hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500/20 transition whitespace-nowrap disabled:opacity-50 cursor-pointer"
-                >
-                  {isActionPending && actionType === 'closeDesk' ? 'Closing...' : 'Close Shift'}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleOpenDesk}
-                  disabled={isActionPending || !selectedCounter.isActive}
-                  className="shrink-0 h-9 px-3.5 inline-flex items-center justify-center bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition whitespace-nowrap disabled:opacity-50 cursor-pointer"
-                >
-                  {isActionPending && actionType === 'openDesk' ? 'Opening...' : 'Open Shift'}
-                </button>
-              )
-            )}
-          </div>
-          {selectedCounter && !selectedCounter.isActive && (
-            <p className="text-[11px] text-amber-700 font-medium">
-              ⚠ This counter is marked inactive. Enable it in the Counters tab to open shifts.
-            </p>
-          )}
-        </div>
-
-        {/* Service Queue Filter */}
-        <div className="space-y-1.5 min-w-0 w-full">
-          <label className="text-xs font-bold text-gray-700 block">
-            Target Service Queue Filter
-          </label>
-          <select
-            value={selectedServiceId}
-            onChange={(e) => {
-              setSelectedServiceId(e.target.value);
-              setError(null);
-            }}
-            disabled={isActionPending}
-            className="w-full min-w-0 h-9 px-3 py-1.5 text-xs border border-gray-300 rounded-xl bg-white font-medium text-gray-800 outline-none hover:border-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-colors disabled:opacity-50 disabled:bg-gray-100 disabled:cursor-not-allowed cursor-pointer truncate"
-          >
-            <option value="">All Services (Global FIFO & Priority)</option>
-            {services.map((s) => (
-              <option key={s.id} value={s.id}>
-                [{s.prefix}] {s.name} ({s.code})
-              </option>
-            ))}
-          </select>
-          <p className="text-[11px] text-gray-500">
-            {selectedServiceId
-              ? 'Desk will prioritize tickets issued for the selected service.'
-              : 'Desk will pull from any waiting service queue based on priority & issuance order.'}
-          </p>
-        </div>
-      </div>
-
-      {/* Main Grid: Current Ticket Action Hero & Live Queue Telemetry */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Active Ticket & Calling Controls (2 cols) */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="p-6 bg-white border border-gray-200 rounded-3xl shadow-xs space-y-6">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+      {/* Operational Cockpit 65/35 Split Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* LEFT ~65% (8 cols): Current Desk / Serving Token Cockpit */}
+        <div className="lg:col-span-8 space-y-5">
+          <div className="p-6 bg-white border border-slate-200/90 rounded-3xl shadow-2xs space-y-6">
+            {/* Cockpit Desk Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="text-sm font-bold text-gray-900">Active Desk Operation</h3>
-                <p className="text-xs text-gray-500">
-                  {selectedCounter
-                    ? `Counter #${selectedCounter.counterNumber} — ${selectedCounter.name}`
-                    : 'Select a counter'}
-                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    OPERATIONAL DESK
+                  </span>
+                  <Badge variant="navy" size="sm" className="font-mono font-bold">
+                    Desk #{selectedCounter?.counterNumber || '-'}
+                  </Badge>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 tracking-tight mt-0.5">
+                  {selectedCounter ? selectedCounter.name : 'Select a counter desk'}
+                </h3>
               </div>
 
-              {/* Status Indicator */}
-              <div className="flex items-center gap-2">
-                <span
-                  className={`w-2.5 h-2.5 rounded-full ${
-                    hasActiveSession ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300'
-                  }`}
-                />
-                <span className="text-xs font-semibold text-gray-700">
-                  {hasActiveSession ? 'SHIFT ACTIVE' : 'SHIFT CLOSED'}
-                </span>
+              {/* Live Shift Status */}
+              <div>
+                {hasActiveSession ? (
+                  <Badge variant="success" size="md" dot pulse>
+                    Shift Active
+                  </Badge>
+                ) : (
+                  <Badge variant="neutral" size="md">
+                    Shift Closed
+                  </Badge>
+                )}
               </div>
             </div>
 
             {/* Warning if Shift is closed */}
             {!hasActiveSession && (
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-center space-y-2">
-                <p className="text-xs text-amber-900 font-medium">
-                  An active operator shift is required on Counter #{selectedCounter?.counterNumber || ''} to call and serve tickets.
+                <p className="text-xs text-amber-900 font-medium leading-relaxed">
+                  An active operator shift is required on Desk #{selectedCounter?.counterNumber || ''} to call and serve citizen tokens.
                 </p>
-                <button
-                  type="button"
+                <Button
+                  variant="success"
+                  size="sm"
                   onClick={handleOpenDesk}
+                  isLoading={isActionPending && actionType === 'openDesk'}
+                  loadingText="Opening Shift..."
                   disabled={isActionPending || !selectedCounter?.isActive}
-                  className="px-4 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition disabled:opacity-50"
                 >
-                  {isActionPending && actionType === 'openDesk' ? 'Opening...' : 'Open Desk Shift Now'}
-                </button>
+                  Open Desk Shift Now
+                </Button>
               </div>
             )}
 
-            {/* Active Ticket Card States */}
+            {/* Active Ticket Hero Cockpit */}
             {activeTicket ? (
-              <div className="p-6 bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-950 text-white rounded-2xl shadow-sm space-y-5">
-                <div className="flex items-center justify-between text-xs text-blue-200 border-b border-white/10 pb-3">
-                  <span className="uppercase font-semibold tracking-wider text-[10px]">
-                    {activeTicket.status === TicketStatus.CALLED ? 'Ticket Called to Desk' : 'Service in Progress'}
-                  </span>
-                  <span className="px-2 py-0.5 rounded bg-white/10 font-mono text-[11px]">
+              <div className="p-6 bg-slate-900 text-white rounded-2xl shadow-sm space-y-5 border border-slate-800">
+                <div className="flex items-center justify-between text-xs text-slate-300 border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="uppercase font-bold tracking-wider text-[10px] text-slate-300">
+                      {activeTicket.status === TicketStatus.CALLED ? 'Token Summoned to Desk' : 'Service in Progress'}
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded bg-slate-800 font-mono text-[11px] text-slate-300 border border-slate-700">
                     Priority: {activeTicket.priority}
                   </span>
                 </div>
 
-                {/* Big Token Number Hero */}
+                {/* Dominant Token Number Display */}
                 <div className="text-center py-2 space-y-1">
-                  <span className="text-5xl sm:text-6xl font-black font-mono tracking-wider block drop-shadow-sm">
+                  <span className="text-5xl sm:text-7xl font-black font-mono tracking-widest block text-white drop-shadow-sm">
                     {activeTicket.ticketNumber}
                   </span>
-                  <p className="text-sm font-semibold text-blue-100">
+                  <p className="text-base font-bold text-slate-100">
                     {activeTicket.service?.name || 'Citizen Service'}
                   </p>
                   {activeTicket.service?.code && KNOWN_SERVICE_METADATA[activeTicket.service.code]?.hindi && (
-                    <p className="text-xs text-blue-200/80 font-medium">
+                    <p className="text-xs text-slate-400 font-medium">
                       {KNOWN_SERVICE_METADATA[activeTicket.service.code]?.hindi}
-                    </p>
-                  )}
-                  {selectedCounter && (
-                    <p className="text-[11px] text-blue-300/90 pt-0.5">
-                      Assigned to Counter #{selectedCounter.counterNumber} — {selectedCounter.name}
                     </p>
                   )}
                 </div>
 
-                {/* Metadata & Timer Bar */}
-                <div className="grid grid-cols-2 gap-2 text-center text-xs py-2 bg-white/5 rounded-xl border border-white/10">
+                {/* Status & Live Duration Timer Bar */}
+                <div className="grid grid-cols-2 gap-2 text-center text-xs py-2.5 bg-slate-800/80 rounded-xl border border-slate-700/80">
                   <div>
-                    <span className="text-[10px] text-blue-300 block uppercase font-medium">Status</span>
-                    <span className="font-bold text-white uppercase">{activeTicket.status}</span>
+                    <span className="text-[10px] text-slate-400 block uppercase font-semibold">Queue State</span>
+                    <span className="font-bold text-white uppercase text-xs mt-0.5 block">{activeTicket.status}</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-blue-300 block uppercase font-medium">
+                    <span className="text-[10px] text-slate-400 block uppercase font-semibold">
                       {activeTicket.status === TicketStatus.SERVING ? 'Serving Duration' : 'Called At'}
                     </span>
-                    <span className="font-mono font-bold text-white">
+                    <span className="font-mono font-bold text-emerald-400 text-sm mt-0.5 block">
                       {activeTicket.status === TicketStatus.SERVING
                         ? servingDuration
                         : activeTicket.calledAt
@@ -719,163 +610,252 @@ export function QueueDesk() {
                 </div>
 
                 {/* State-Specific Action Buttons */}
-                <div className="pt-2 flex flex-wrap items-center gap-3">
+                <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                   {activeTicket.status === TicketStatus.CALLED && (
                     <>
-                      <button
-                        type="button"
+                      <Button
+                        variant="success"
+                        size="lg"
+                        fullWidth
                         onClick={handleStartServing}
+                        isLoading={isActionPending && actionType === 'serve'}
+                        loadingText="Starting Service..."
                         disabled={isActionPending}
-                        className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="font-bold text-sm"
                       >
-                        {isActionPending && actionType === 'serve' ? (
-                          <>
-                            <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            <span>Starting Service...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>▶ Start Serving</span>
-                          </>
-                        )}
-                      </button>
+                        <span>▶ Start Serving Citizen</span>
+                      </Button>
 
-                      <button
-                        type="button"
+                      <Button
+                        variant="destructive-outline"
+                        size="lg"
                         onClick={handleSkipTicket}
+                        isLoading={isActionPending && actionType === 'skip'}
+                        loadingText="Marking No-Show..."
                         disabled={isActionPending}
-                        className="px-4 py-3 bg-white/10 hover:bg-red-600/80 text-white rounded-xl text-xs font-bold transition border border-white/20 disabled:opacity-50"
+                        className="shrink-0 bg-slate-800 text-rose-300 border-slate-700 hover:bg-rose-900/40 hover:text-white"
                       >
-                        {isActionPending && actionType === 'skip' ? 'Skipping...' : '✕ Mark No-Show'}
-                      </button>
+                        <span>✕ Mark No-Show</span>
+                      </Button>
                     </>
                   )}
 
                   {activeTicket.status === TicketStatus.SERVING && (
-                    <button
-                      type="button"
-                      onClick={handleCompleteService}
-                      disabled={isActionPending}
-                      className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      {isActionPending && actionType === 'complete' ? (
-                        <>
-                          <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          <span>Completing Service...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>✓ Complete Service</span>
-                        </>
-                      )}
-                    </button>
+                    <>
+                      <Button
+                        variant="success"
+                        size="lg"
+                        fullWidth
+                        onClick={handleCompleteService}
+                        isLoading={isActionPending && actionType === 'complete'}
+                        loadingText="Completing Service..."
+                        disabled={isActionPending}
+                        className="font-bold text-sm bg-emerald-600 hover:bg-emerald-500 text-white"
+                      >
+                        <span>✓ Complete Service Session</span>
+                      </Button>
+
+                      <Button
+                        variant="destructive-outline"
+                        size="lg"
+                        onClick={handleSkipTicket}
+                        isLoading={isActionPending && actionType === 'skip'}
+                        loadingText="Cancelling..."
+                        disabled={isActionPending}
+                        className="shrink-0 bg-slate-800 text-rose-300 border-slate-700 hover:bg-rose-900/40 hover:text-white"
+                      >
+                        <span>✕ Cancel / Skip</span>
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
             ) : (
-              /* Idle Desk: No Ticket in Progress */
-              <div className="p-8 border-2 border-dashed border-gray-200 rounded-2xl text-center space-y-4">
-                <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto text-xl font-bold">
-                  ✓
+              /* Idle Desk Cockpit: Ready to Call Next */
+              <div className="p-8 sm:p-10 border-2 border-dashed border-slate-200 rounded-3xl text-center space-y-5 bg-slate-50/50">
+                <div className="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center mx-auto text-2xl font-bold shadow-xs">
+                  🪑
                 </div>
-                <div className="space-y-1">
-                  <h4 className="text-base font-bold text-gray-900">Desk Ready for Next Citizen</h4>
-                  <p className="text-xs text-gray-500">
-                    No active ticket at Counter #{selectedCounter?.counterNumber || '-'}. Click below to call the next waiting citizen.
+                <div className="max-w-md mx-auto space-y-1">
+                  <h4 className="text-lg font-bold text-slate-900">Desk Standby · Ready for Next Citizen</h4>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Desk #{selectedCounter?.counterNumber || '-'} is open and waiting. Click the primary button
+                    below to summon the next citizen according to FIFO priority.
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleCallNext}
-                  disabled={isActionPending || !hasActiveSession}
-                  className="w-full sm:w-auto px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isActionPending && actionType === 'callNext' ? (
-                    <>
-                      <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Calling Next...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>⏭ Call Next Ticket</span>
-                    </>
-                  )}
-                </button>
+                {/* Primary Action Button: CALL NEXT (The dominant action on the page) */}
+                <div className="pt-2">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onClick={handleCallNext}
+                    isLoading={isActionPending && actionType === 'callNext'}
+                    loadingText="Calling Next Citizen..."
+                    disabled={isActionPending || !hasActiveSession}
+                    className="px-10 py-4 text-sm sm:text-base font-extrabold shadow-md mx-auto"
+                  >
+                    <span>📢 CALL NEXT CITIZEN</span>
+                    <span>→</span>
+                  </Button>
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Right Column: Realtime Queue Telemetry (1 col) */}
-        <div className="space-y-4">
-          <div className="p-6 bg-white border border-gray-200 rounded-3xl shadow-xs space-y-5">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <h3 className="text-sm font-bold text-gray-900">Queue Telemetry</h3>
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-50 text-green-700 border border-green-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                Live
-              </span>
-            </div>
-
-            {/* Metrics Grid */}
-            <div className="space-y-3">
-              {/* Waiting Citizens */}
-              <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/70 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-gray-500 block uppercase font-semibold">Waiting in Line</span>
-                  <span className="text-2xl font-black font-mono text-gray-900">
-                    {queueMetrics?.waitingCount ?? '--'}
-                  </span>
-                </div>
-                <span className="text-xs text-gray-400 font-medium">citizens</span>
+        {/* RIGHT ~35% (4 cols): Persistent Telemetry Rail */}
+        <div className="lg:col-span-4 space-y-4">
+          {/* Desk Session Controller Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Desk & Shift Controller</CardTitle>
+              <CardDescription>Select active hardware counter and shift state</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 block">
+                  Active Service Desk
+                </label>
+                <select
+                  value={selectedCounterId || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedCounterId(val);
+                    sessionStorage.setItem(STORAGE_COUNTER_KEY, val);
+                    setError(null);
+                    setSuccessMsg(null);
+                  }}
+                  disabled={isActionPending}
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white font-medium text-slate-800 focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
+                >
+                  {counters.map((c) => {
+                    const sessionStatus = c.currentSession?.isActive
+                      ? `(Open: ${c.currentSession.user?.name || 'Operator'})`
+                      : '(Closed)';
+                    return (
+                      <option key={c.id} value={c.id}>
+                        Counter #{c.counterNumber} — {c.name} {sessionStatus}
+                      </option>
+                    );
+                  })}
+                </select>
               </div>
 
-              {/* Estimated Wait Time */}
-              <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/70 flex items-center justify-between">
+              {/* Shift Toggle Button */}
+              {selectedCounter && (
                 <div>
-                  <span className="text-[10px] text-gray-500 block uppercase font-semibold">Estimated Wait Time</span>
-                  <span className="text-base font-bold text-blue-700 block mt-0.5">
-                    <WaitTimeDisplay
-                      estimatedWaitSeconds={queueMetrics?.estimatedWaitSeconds}
-                      showIcon={false}
-                    />
+                  {hasActiveSession ? (
+                    <Button
+                      variant="destructive-outline"
+                      size="sm"
+                      fullWidth
+                      onClick={handleCloseDesk}
+                      isLoading={isActionPending && actionType === 'closeDesk'}
+                      loadingText="Closing..."
+                      disabled={isActionPending}
+                    >
+                      Close Desk Shift
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="success"
+                      size="sm"
+                      fullWidth
+                      onClick={handleOpenDesk}
+                      isLoading={isActionPending && actionType === 'openDesk'}
+                      loadingText="Opening..."
+                      disabled={isActionPending || !selectedCounter.isActive}
+                    >
+                      Open Desk Shift
+                    </Button>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Queue Filter Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Queue Priority Filter</CardTitle>
+              <CardDescription>Filter tickets summoned to this desk</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 block">
+                  Service Specialization
+                </label>
+                <select
+                  value={selectedServiceId}
+                  onChange={(e) => {
+                    setSelectedServiceId(e.target.value);
+                    setError(null);
+                  }}
+                  disabled={isActionPending}
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white font-medium text-slate-800 focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
+                >
+                  <option value="">All Services (Global FIFO)</option>
+                  {services.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      [{s.prefix}] {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                {selectedServiceId
+                  ? 'Desk will prioritize tickets issued for this specific service.'
+                  : 'Desk will pull from any waiting service queue based on arrival order.'}
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Live Queue Telemetry Metrics */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Live Center Telemetry</CardTitle>
+              <CardDescription>Real-time queue load and citizen volume</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
+                  <span className="text-[10px] text-slate-500 block uppercase font-semibold">Waiting Citizens</span>
+                  <span className="text-xl font-black font-mono text-slate-900 block mt-0.5">
+                    {queueMetrics?.waitingCount ?? 0}
                   </span>
                 </div>
-                <span className="text-xs text-gray-400 font-medium">ETA Engine</span>
-              </div>
 
-              {/* Active Open Desks */}
-              <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/70 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-gray-500 block uppercase font-semibold">Active Counters</span>
-                  <span className="text-lg font-bold text-gray-800">
-                    {queueMetrics?.activeCountersCount ?? counters.filter((c) => c.currentSession?.isActive).length} / {counters.length}
-                  </span>
+                <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
+                  <span className="text-[10px] text-slate-500 block uppercase font-semibold">Demand Level</span>
+                  <div className="mt-1">
+                    <Badge
+                      variant={
+                        queueMetrics?.demandLevel === DemandLevel.HIGH
+                          ? 'destructive'
+                          : queueMetrics?.demandLevel === DemandLevel.MEDIUM
+                          ? 'warning'
+                          : 'success'
+                      }
+                      size="sm"
+                    >
+                      {queueMetrics?.demandLevel || 'LOW'}
+                    </Badge>
+                  </div>
                 </div>
-                <span className="text-xs text-emerald-600 font-medium font-mono">Open</span>
               </div>
 
-              {/* Demand Level Indicator */}
-              <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/70 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-gray-500 block uppercase font-semibold">Queue Demand Level</span>
-                  <span
-                    className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${getDemandBadge(
-                      queueMetrics?.demandLevel
-                    )}`}
-                  >
-                    {queueMetrics?.demandLevel || DemandLevel.LOW}
-                  </span>
-                </div>
-                <span className="text-[11px] text-gray-400">Statistical</span>
+              <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-xs space-y-1">
+                <span className="text-[10px] text-slate-500 block uppercase font-semibold">Est. Wait Ahead</span>
+                <span className="font-bold text-slate-900 text-sm block">
+                  <WaitTimeDisplay
+                    estimatedWaitSeconds={queueMetrics?.estimatedWaitSeconds}
+                    showIcon={true}
+                  />
+                </span>
               </div>
-            </div>
-
-            <div className="pt-2 text-[11px] text-gray-400 leading-relaxed text-center">
-              Queue positions and wait times update in real-time across citizen and operator portals.
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

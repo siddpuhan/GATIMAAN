@@ -1,68 +1,164 @@
 import React, { useState } from 'react';
-import { useUser } from '@clerk/clerk-react';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { AdminSidebar } from '../components/admin/AdminSidebar.js';
+import { AdminTopHeader } from '../components/admin/AdminTopHeader.js';
+import { AdminOverviewPage } from './AdminOverviewPage.js';
+import { AdminQueuePage } from './AdminQueuePage.js';
+import { QueueDesk } from '../components/admin/QueueDesk.js';
 import { ServicesManagement } from '../components/admin/ServicesManagement.js';
 import { CountersManagement } from '../components/admin/CountersManagement.js';
-import { QueueDesk } from '../components/admin/QueueDesk.js';
+import { AdminPlaceholderPage } from './AdminPlaceholderPage.js';
+
+interface RouteMeta {
+  title: string;
+  description: string;
+}
+
+const ROUTE_META: Record<string, RouteMeta> = {
+  '/admin': {
+    title: 'Center Command Overview',
+    description: 'State of the center telemetry, active desks, and live queue snapshots',
+  },
+  '/admin/queue': {
+    title: 'Queue Desk Cockpit',
+    description: 'Operator desk workspace, ticket summoning, and live citizen processing',
+  },
+  '/admin/queue-desk': {
+    title: 'Queue Desk Cockpit',
+    description: 'Operator desk workspace, ticket summoning, and live citizen processing',
+  },
+  '/admin/queue-operations': {
+    title: 'Queue Operations Console',
+    description: 'Service & counter queue dispatch, ticket calling, and status override',
+  },
+  '/admin/services': {
+    title: 'Services Management',
+    description: 'Configure citizen facilitation services, prefixes, and average durations',
+  },
+  '/admin/counters': {
+    title: 'Counters & Physical Desks',
+    description: 'Manage physical service desks, operator sessions, and desk assignments',
+  },
+  '/admin/footfall': {
+    title: 'Footfall Intelligence',
+    description: 'Hourly citizen arrival patterns, congestion tracking, and volume logs',
+  },
+  '/admin/analytics': {
+    title: 'Center SLA Analytics',
+    description: 'Department service times, operator efficiency, and throughput benchmarks',
+  },
+  '/admin/predictions': {
+    title: 'Predictive Demand Engine',
+    description: 'AI-driven queue rush forecasting and automated desk staffing suggestions',
+  },
+  '/admin/notifications': {
+    title: 'System Notifications',
+    description: 'Citizen SMS dispatch logs, operator alerts, and center announcements',
+  },
+  '/admin/settings': {
+    title: 'Center & System Settings',
+    description: 'Operational hours, security policies, and administrative preferences',
+  },
+};
 
 export function AdminShellPage() {
-  const { user } = useUser();
-  const [activeTab, setActiveTab] = useState<'queue' | 'services' | 'counters'>('queue');
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  const currentMeta = ROUTE_META[location.pathname] || {
+    title: 'Admin Control Center',
+    description: 'GATIMAAN Government Queue Management System',
+  };
 
   return (
-    <div className="max-w-5xl mx-auto p-6 bg-white rounded-lg shadow-sm border border-gray-200 mt-6 space-y-6">
-      <div className="flex items-center justify-between pb-4 border-b border-gray-200">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">Admin Control Center</h2>
-          <p className="text-xs text-gray-500">
-            Citizen Service Center Operations • Operator: {user?.primaryEmailAddress?.emailAddress || 'Admin'}
-          </p>
+    <div className="min-h-[calc(100vh-140px)] w-full flex bg-slate-100 rounded-3xl overflow-hidden border border-slate-200 shadow-xs">
+      {/* Persistent / Responsive Left Sidebar */}
+      <AdminSidebar
+        isOpen={mobileSidebarOpen}
+        onCloseMobile={() => setMobileSidebarOpen(false)}
+      />
+
+      {/* Main Admin Content Column */}
+      <div className="flex-1 flex flex-col min-w-0 bg-slate-50">
+        {/* Admin Top Header */}
+        <AdminTopHeader
+          title={currentMeta.title}
+          description={currentMeta.description}
+          onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+        />
+
+        {/* Routed Subpage Content */}
+        <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+          <Routes>
+            <Route index element={<AdminOverviewPage />} />
+            <Route path="queue" element={<QueueDesk />} />
+            <Route path="queue-desk" element={<QueueDesk />} />
+            <Route path="queue-operations" element={<AdminQueuePage />} />
+            <Route path="services" element={<ServicesManagement />} />
+            <Route path="counters" element={<CountersManagement />} />
+            <Route
+              path="footfall"
+              element={
+                <AdminPlaceholderPage
+                  title="Footfall Intelligence"
+                  category="INSIGHT"
+                  description="Real-time citizen arrival tracking, peak traffic volume analysis, and historical footfall heatmaps for Tehsil and Collectorate centers."
+                  upcomingPhase="Phase 2 Analytics"
+                  icon="👥"
+                />
+              }
+            />
+            <Route
+              path="analytics"
+              element={
+                <AdminPlaceholderPage
+                  title="Queue & SLA Analytics"
+                  category="INSIGHT"
+                  description="Detailed department throughput logs, operator resolution times, wait-time SLA compliance, and center performance dashboards."
+                  upcomingPhase="Phase 2 Analytics"
+                  icon="📈"
+                />
+              }
+            />
+            <Route
+              path="predictions"
+              element={
+                <AdminPlaceholderPage
+                  title="Predictive Demand Engine"
+                  category="INSIGHT"
+                  description="Machine learning forecasting models predicting expected rush hours, seasonal demand spikes, and proactive counter allocation."
+                  upcomingPhase="Phase 4 AI Insights"
+                  icon="🔮"
+                />
+              }
+            />
+            <Route
+              path="notifications"
+              element={
+                <AdminPlaceholderPage
+                  title="Notification Center"
+                  category="SYSTEM"
+                  description="Real-time citizen SMS delivery logs, counter summon alerts, emergency broadcast notices, and operator notifications."
+                  upcomingPhase="Phase 3 System"
+                  icon="🔔"
+                />
+              }
+            />
+            <Route
+              path="settings"
+              element={
+                <AdminPlaceholderPage
+                  title="Center & System Settings"
+                  category="SYSTEM"
+                  description="Center working hours configuration, service prefix masks, role-based operator permissions, and database backup controls."
+                  upcomingPhase="Phase 3 System"
+                  icon="⚙️"
+                />
+              }
+            />
+          </Routes>
         </div>
-        <span className="px-3 py-1 bg-purple-50 text-purple-700 text-xs font-semibold rounded-full border border-purple-200">
-          ADMIN AUTHORIZED
-        </span>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-gray-200 text-xs font-medium">
-        <button
-          onClick={() => setActiveTab('queue')}
-          className={`pb-2.5 px-4 -mb-px border-b-2 transition ${
-            activeTab === 'queue'
-              ? 'border-blue-600 text-blue-600 font-semibold'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Queue Desk
-        </button>
-        <button
-          onClick={() => setActiveTab('services')}
-          className={`pb-2.5 px-4 -mb-px border-b-2 transition ${
-            activeTab === 'services'
-              ? 'border-blue-600 text-blue-600 font-semibold'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Services Management
-        </button>
-        <button
-          onClick={() => setActiveTab('counters')}
-          className={`pb-2.5 px-4 -mb-px border-b-2 transition ${
-            activeTab === 'counters'
-              ? 'border-blue-600 text-blue-600 font-semibold'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Counters & Desks
-        </button>
-      </div>
-
-      {/* Tab Content */}
-      <div className="pt-2">
-        {activeTab === 'queue' && <QueueDesk />}
-        {activeTab === 'services' && <ServicesManagement />}
-        {activeTab === 'counters' && <CountersManagement />}
       </div>
     </div>
   );
 }
-
